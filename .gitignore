@@ -1,0 +1,19 @@
+# Python
+api/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Local database
+api/*.db
+
+# Node
+web/node_modules/
+web/dist/
+
+# Local settings (contains the break-glass password) and the Google service-account key
+.env
+.env.*
+!.env.example
+api/secrets/
+/Samples/
