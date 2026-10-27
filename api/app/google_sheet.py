@@ -1,8 +1,9 @@
-"""Read the client's Google Sheet through the Sheets API with a service account.
+"""Read the client's Google Sheet through the Sheets API with a service account or a signed-in user.
 
 Setup: create a service account in Google Cloud with the Sheets API enabled, download its JSON key,
 share the sheet with the account's email as Viewer, and set TRACKER_GOOGLE_SHEET and
-TRACKER_GOOGLE_CREDENTIALS in .env.
+TRACKER_GOOGLE_CREDENTIALS in .env. Until there's a service account, TRACKER_GOOGLE_CREDENTIALS can
+instead point at a user token saved by `python -m scripts.google_login` (see that script).
 
 Returns the same {tab: grid} shape as sheet_import.read_workbook(), using each cell's computed value
 and its own background color (not conditional formatting, matching the .xlsx export).
@@ -41,6 +42,29 @@ def service_account_email(credentials: Path) -> str | None:
         return None
 
 
+def is_user_token(credentials: Path) -> bool:
+    try:
+        return json.loads(credentials.read_text()).get("type") == "authorized_user"
+    except (OSError, ValueError):
+        return False
+
+
+def load_credentials(credentials: Path):
+    """Service-account key or saved user token, whichever the file is."""
+    if not credentials.is_file():
+        raise SheetError(f"Google credentials not found at {credentials}")
+    try:
+        if is_user_token(credentials):
+            from google.oauth2.credentials import Credentials
+
+            return Credentials.from_authorized_user_file(str(credentials), scopes=SCOPES)
+        from google.oauth2 import service_account
+
+        return service_account.Credentials.from_service_account_file(str(credentials), scopes=SCOPES)
+    except (ValueError, KeyError) as e:
+        raise SheetError(f"Couldn't read the Google credentials file: {e}") from None
+
+
 def hex_color(color: dict | None) -> str | None:
     if not color:
         return None
@@ -70,22 +94,19 @@ def read_spreadsheet(sheet: str, credentials: Path, session=None) -> dict[str, G
     """Fetch every month tab. `session` is an authorized requests-style session (for tests)."""
     sheet_id = spreadsheet_id(sheet)
     if session is None:
-        if not credentials.is_file():
-            raise SheetError(f"Service-account key not found at {credentials}")
         from google.auth.transport.requests import AuthorizedSession
-        from google.oauth2 import service_account
 
-        try:
-            creds = service_account.Credentials.from_service_account_file(str(credentials), scopes=SCOPES)
-        except (ValueError, KeyError) as e:
-            raise SheetError(f"Couldn't read the service-account key: {e}") from None
-        session = AuthorizedSession(creds)
+        session = AuthorizedSession(load_credentials(credentials))
 
     def get(params: dict) -> dict:
         try:
             res = session.get(f"{API}/{sheet_id}", params=params, timeout=60)
         except Exception as e:  # network errors, token refresh failures
+            if is_user_token(credentials) and "invalid_grant" in str(e):
+                raise SheetError("Google sign-in expired; run `python -m scripts.google_login` in api/") from None
             raise SheetError(f"Couldn't reach Google Sheets: {e}") from None
+        if res.status_code == 403 and is_user_token(credentials):
+            raise SheetError("The signed-in Google account can't open the sheet; share the sheet with it as Viewer")
         if res.status_code == 403:
             email = service_account_email(credentials)
             who = f" ({email})" if email else ""

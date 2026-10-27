@@ -125,3 +125,20 @@ def test_sheet_deals_are_read_only(user_client, session):
     assert got["sheet_ref"] == "926!B2" and got["sheet_plus"] is False
     res = user_client.delete(f"/api/deals/{deal.id}")
     assert res.status_code == 409 and "Google Sheet" in res.json()["detail"]
+
+
+def test_read_spreadsheet_user_token_not_shared(tmp_path):
+    token = tmp_path / "token.json"
+    token.write_text('{"type": "authorized_user", "client_id": "c", "client_secret": "s", "refresh_token": "r"}')
+    with pytest.raises(SheetError, match="signed-in Google account can't open"):
+        read_spreadsheet(SHEET_ID, token, session=FakeSession(403))
+
+
+def test_load_credentials_user_token(tmp_path):
+    from google.oauth2.credentials import Credentials
+
+    from app.google_sheet import load_credentials
+
+    token = tmp_path / "token.json"
+    token.write_text('{"type": "authorized_user", "client_id": "c", "client_secret": "s", "refresh_token": "r"}')
+    assert isinstance(load_credentials(token), Credentials)

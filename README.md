@@ -60,7 +60,7 @@ cd web && npm run dev                        # http://localhost:5190 (TRACKER_WE
 | `TRACKER_CORS_ORIGINS` | the web dev server | Only needed if a browser calls the API directly, not via the proxy |
 | `TRACKER_SESSION_DAYS` | `14` | How long a sign-in lasts |
 | `TRACKER_GOOGLE_SHEET` | *(empty)* | The client's Google Sheet URL; sync is off until this and the key are set |
-| `TRACKER_GOOGLE_CREDENTIALS` | *(empty)* | Path to the service-account JSON key (relative to the repo root) |
+| `TRACKER_GOOGLE_CREDENTIALS` | *(empty)* | Path to the service-account JSON key, or a user token from `scripts.google_login` (relative to the repo root) |
 | `TRACKER_GOOGLE_SYNC_MINUTES` | `5` | Minutes between syncs; `0` = only *Sync now* |
 
 ## Accounts and access
@@ -139,6 +139,12 @@ The client keeps entering deals on their Google Sheet; the API copies it into th
 **Setup** (once): in Google Cloud, enable the Google Sheets API, create a service account, and download a JSON key
 to `api/secrets/` (not committed). Share the sheet with the service account's email as **Viewer**. In `.env` set
 `TRACKER_GOOGLE_SHEET` (the sheet's URL) and `TRACKER_GOOGLE_CREDENTIALS` (the key's path), then restart the API.
+
+**Stopgap without a service account:** sign in as a Google account that can view the sheet. Create an OAuth client
+ID (Desktop app) in Google Cloud, save its JSON as `api/secrets/google-oauth-client.json`, run
+`.venv/bin/python -m scripts.google_login` from `api/`, and set `TRACKER_GOOGLE_CREDENTIALS` to the token it saves.
+While the OAuth consent screen is in Testing, the sign-in lasts about 7 days; run the script again when
+**Admin → Sheet** says it expired. Full steps are in `api/scripts/google_login.py`.
 
 **What a sync does** (safe to repeat):
 - Every month tab (named `MMYY` or `MYY`, e.g. `0124`, `926`) is a month; other tabs (Overview, Monthly Template,
