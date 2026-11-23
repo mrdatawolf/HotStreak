@@ -1,9 +1,9 @@
 """Passwords, sessions, and the permission checks used by the routers.
 
-Three kinds of callers:
+Callers:
 - a signed-in user (Authorization: Bearer <token>), role "admin" or "user"
 - the break-glass super admin from .env, which has no user row and can always sign in
-- a TV/display holding the read-only board key (X-Board-Key header), which can only view the board
+- anyone else (including the office TV), who can only view the board; those endpoints take no dependency
 """
 
 import base64
@@ -28,7 +28,6 @@ log = logging.getLogger("tracker.auth")
 MAX_FAILED_LOGINS = 5
 LOCKOUT = timedelta(minutes=15)
 MIN_PASSWORD_LENGTH = 10
-BOARD_KEY_SETTING = "board_key"
 
 _SCRYPT = {"n": 2**14, "r": 8, "p": 1}
 
@@ -70,7 +69,7 @@ def _token_hash(token: str) -> str:
 @dataclass
 class Principal:
     name: str
-    role: str  # "admin", "user", or "board"
+    role: str  # "admin" or "user"
     user_id: int | None = None
     email: str | None = None
     is_breakglass: bool = False
@@ -155,15 +154,9 @@ def user_principal(user: models.User, session_id: int | None = None) -> Principa
     return Principal(name=user.name, role=user.role, user_id=user.id, email=user.email, session_id=session_id)
 
 
-def get_board_key(db: Session) -> str | None:
-    setting = db.get(models.Setting, BOARD_KEY_SETTING)
-    return setting.value if setting else None
-
-
 def get_principal(
     db: Session = Depends(get_session),
     authorization: str | None = Header(default=None),
-    x_board_key: str | None = Header(default=None),
 ) -> Principal | None:
     if authorization and authorization.lower().startswith("bearer "):
         token = authorization[7:].strip()
@@ -177,24 +170,12 @@ def get_principal(
             return breakglass_principal(auth.id) if settings.breakglass_password else None
         if auth.user and auth.user.active:
             return user_principal(auth.user, auth.id)
-        return None
-
-    if x_board_key:
-        key = get_board_key(db)
-        if key and hmac.compare_digest(x_board_key.encode(), key.encode()):
-            return Principal(name="Board display", role="board")
     return None
 
 
-def require_viewer(principal: Principal | None = Depends(get_principal)) -> Principal:
-    """Anyone allowed to see the board, including a display with the board key."""
+def require_user(principal: Principal | None = Depends(get_principal)) -> Principal:
+    """Any signed-in user or admin."""
     if not principal:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Sign in required")
-    return principal
-
-
-def require_user(principal: Principal = Depends(require_viewer)) -> Principal:
-    if principal.role == "board":
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Sign in required")
     return principal
 

@@ -117,39 +117,33 @@ def test_change_own_password_signs_out_other_devices(client, session):
 
 def test_permissions(client, user_client, session):
     anon = client.__class__(client.app)
-    assert anon.get("/api/periods").status_code == 401
     assert anon.get("/api/reps").status_code == 401
+    assert anon.get("/api/reports").status_code == 401
 
     assert user_client.get("/api/reps").status_code == 200
     assert user_client.post("/api/reps", json={"name": "X"}).status_code == 403
     assert user_client.get("/api/users").status_code == 403
-    assert user_client.get("/api/settings").json()["board_key"] is None
+    assert user_client.get("/api/settings").json() == {"quota_unit": "usd_thousands"}
 
 
-def test_board_key_only_opens_the_board(admin_client, session):
-    key = admin_client.post("/api/settings/board-key").json()["board_key"]
-    session.add(models.Period(year=2026, month=9))
+def test_board_is_public(client, session):
+    """Signed-out visitors see the board and nothing else."""
+    period = models.Period(year=2026, month=9)
+    session.add(period)
     session.commit()
+    anon = client.__class__(client.app)
+    assert anon.get("/api/periods").status_code == 200
+    assert anon.get("/api/periods/current").json()["id"] == period.id
+    assert anon.get(f"/api/periods/{period.id}/board").status_code == 200
+    # A stale token doesn't block the board, and an old TV link's key is ignored.
+    assert anon.get("/api/periods/current", headers={"Authorization": "Bearer nope"}).status_code == 200
+    assert anon.get("/api/periods/current", headers={"X-Board-Key": "old"}).status_code == 200
+    assert anon.get("/api/reports", headers={"X-Board-Key": "old"}).status_code == 401
 
-    tv = admin_client.__class__(admin_client.app)
-    assert tv.get("/api/periods/current").status_code == 401
-    tv.headers["X-Board-Key"] = key
-    period = tv.get("/api/periods/current").json()
-    assert tv.get(f"/api/periods/{period['id']}/board").status_code == 200
-    assert tv.get("/api/auth/me").json()["role"] == "board"
-    # Reports (and the rep names it filters by) are read-only, so displays get them too.
-    assert tv.get("/api/reports").status_code == 200
-    assert tv.get("/api/reps").status_code == 200
-    assert tv.post("/api/reps", json={"name": "X"}).status_code == 401
-    assert tv.get("/api/deals").status_code == 401
-    assert tv.get("/api/clients").status_code == 401
-    assert tv.get("/api/users").status_code == 401
-    assert tv.get("/api/settings").status_code == 401
-
-    tv.headers["X-Board-Key"] = "wrong"
-    assert tv.get("/api/periods/current").status_code == 401
-
-    # Rotating the key cuts off the old one.
-    tv.headers["X-Board-Key"] = key
-    admin_client.post("/api/settings/board-key")
-    assert tv.get("/api/periods/current").status_code == 401
+    assert anon.get(f"/api/periods/{period.id}/reps").status_code == 401
+    assert anon.get("/api/periods/summary").status_code == 401
+    assert anon.get("/api/auth/me").status_code == 401
+    assert anon.post(f"/api/periods/{period.id}/lock").status_code == 401
+    for path in ("/api/reports", "/api/reports/trends", "/api/reps", "/api/deals", "/api/clients", "/api/users",
+                 "/api/settings"):
+        assert anon.get(path).status_code == 401, path

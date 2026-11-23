@@ -65,7 +65,7 @@ def months_through(end: tuple[int, int]):
         year, month = (year + 1, 1) if month == 12 else (year, month + 1)
 
 
-# Accounts, sign-ins, settings (like the TV board key) and sheet name fixes survive a reseed.
+# Accounts, sign-ins, settings and sheet name fixes survive a reseed.
 KEEP_ON_RESET = {"users", "sessions", "settings", "name_fixes"}
 
 

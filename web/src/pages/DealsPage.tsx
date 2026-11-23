@@ -1,12 +1,15 @@
 import { useCallback } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { api, errorMessage } from '../api/client'
+import { useAuth } from '../auth/AuthContext'
 import { money, monthLabel } from '../lib/format'
 import { useLoad } from '../lib/useLoad'
 
 export default function DealsPage() {
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
+  // Only admins add or edit deals; users see the list read-only.
+  const canEdit = !!useAuth().me?.is_admin
   const periods = useLoad(useCallback(() => api.GET('/api/periods'), []))
   const reps = useLoad(useCallback(() => api.GET('/api/reps'), []))
 
@@ -57,7 +60,7 @@ export default function DealsPage() {
         </label>
         <input type="search" placeholder="Search client, item, notes…" aria-label="Search deals" value={q}
           onChange={(e) => setParam('q', e.target.value)} />
-        {period && !period.locked_at && (
+        {canEdit && period && !period.locked_at && (
           <Link className="button primary"
             to={`/deals/new?period=${periodId}${repId ? `&rep=${repId}` : ''}&return=${encodeURIComponent(here)}`}>
             Add deal
@@ -83,11 +86,11 @@ export default function DealsPage() {
             {shown.map((d) => {
               const open = `/deals/${d.id}?return=${encodeURIComponent(here)}`
               return (
-                <tr key={d.id} className="clickable" onClick={() => navigate(open)}>
+                <tr key={d.id} className={canEdit ? 'clickable' : undefined} onClick={canEdit ? () => navigate(open) : undefined}>
                   <td data-label="Date">{d.deal_date ? new Date(d.deal_date + 'T00:00').toLocaleDateString() : '—'}</td>
                   <td data-label="Rep">{d.rep_name}</td>
                   <td data-label="Client">
-                    <Link to={open} onClick={(e) => e.stopPropagation()}>{d.client.name}</Link>
+                    {canEdit ? <Link to={open} onClick={(e) => e.stopPropagation()}>{d.client.name}</Link> : d.client.name}
                     {d.client.location && <span className="muted"> · {d.client.location}</span>}
                     {d.flags.map((f) => (
                       <span key={f.id} className="flag-chip" style={{ ['--flag' as string]: f.color }}>{f.name}</span>

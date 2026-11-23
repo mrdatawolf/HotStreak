@@ -6,7 +6,9 @@ from .. import auth, models, schemas
 from ..board import build_board
 from ..db import get_session
 
-router = APIRouter(prefix="/periods", tags=["periods"], dependencies=[Depends(auth.require_viewer)])
+# The board is public: listing months, the current month and a month's board need no sign-in.
+# Everything else sets its own access below.
+router = APIRouter(prefix="/periods", tags=["periods"])
 
 
 def load_period(db: Session, period_id: int) -> models.Period:
@@ -131,7 +133,7 @@ def period_board(period_id: int, session: Session = Depends(get_session)):
     return build_board(session, load_period(session, period_id))
 
 
-@router.get("/{period_id}/reps", response_model=list[schemas.PeriodRepOut])
+@router.get("/{period_id}/reps", response_model=list[schemas.PeriodRepOut], dependencies=[Depends(auth.require_user)])
 def get_period_reps(period_id: int, db: Session = Depends(get_session)):
     return period_reps_out(load_period(db, period_id))
 

@@ -134,9 +134,6 @@ def test_locked_period_quotas_read_only(admin_client, session):
 
 def test_settings(admin_client):
     s = admin_client.get("/api/settings").json()
-    assert s == {"quota_unit": "usd_thousands", "board_key": None}
+    assert s == {"quota_unit": "usd_thousands"}
     assert admin_client.patch("/api/settings", json={"quota_unit": "units"}).json()["quota_unit"] == "units"
     assert admin_client.patch("/api/settings", json={"quota_unit": "bananas"}).status_code == 422
-    key = admin_client.post("/api/settings/board-key").json()["board_key"]
-    assert len(key) >= 20
-    assert admin_client.delete("/api/settings/board-key").json()["board_key"] is None

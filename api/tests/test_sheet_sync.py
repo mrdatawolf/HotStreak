@@ -117,13 +117,13 @@ def test_sheet_endpoints_admin_only(user_client):
     assert user_client.post("/api/sheet/names/item/apply-suggestions").status_code == 403
 
 
-def test_sheet_deals_are_read_only(user_client, session):
+def test_sheet_deals_are_read_only(admin_client, session):
     factory = sessionmaker(bind=session.get_bind(), expire_on_commit=False)
     sheet_sync.run(read=lambda: {"926": to_grid(SEPT)}, session_factory=factory)
     deal = session.scalar(select(models.Deal))
-    got = user_client.get(f"/api/deals/{deal.id}").json()
+    got = admin_client.get(f"/api/deals/{deal.id}").json()
     assert got["sheet_ref"] == "926!B2" and got["sheet_plus"] is False
-    res = user_client.delete(f"/api/deals/{deal.id}")
+    res = admin_client.delete(f"/api/deals/{deal.id}")
     assert res.status_code == 409 and "Google Sheet" in res.json()["detail"]
 
 

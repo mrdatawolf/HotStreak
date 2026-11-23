@@ -11,8 +11,8 @@ router = APIRouter(prefix="/reps", tags=["reps"])
 DUPLICATE = "A rep with that name already exists"
 
 
-# Viewable with the board key: names are already on the board, and Reports needs them for its rep filter.
-@router.get("", response_model=list[schemas.RepOut], dependencies=[Depends(auth.require_viewer)])
+# Any signed-in user: Reports needs the names for its rep filter.
+@router.get("", response_model=list[schemas.RepOut], dependencies=[Depends(auth.require_user)])
 def list_reps(db: Session = Depends(get_session)):
     return db.scalars(select(models.Rep).order_by(models.Rep.name)).all()
 

@@ -19,7 +19,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  if (me && me.role !== 'board') return <Navigate to={next} replace />
+  if (me) return <Navigate to={next} replace />
 
   async function submit(e: FormEvent) {
     e.preventDefault()

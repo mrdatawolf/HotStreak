@@ -534,27 +534,6 @@ export interface paths {
         patch: operations["update_settings_api_settings_patch"];
         trace?: never;
     };
-    "/api/settings/board-key": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Rotate Board Key
-         * @description Create or replace the read-only key for TV displays. Displays using the old key stop working.
-         */
-        post: operations["rotate_board_key_api_settings_board_key_post"];
-        /** Remove Board Key */
-        delete: operations["remove_board_key_api_settings_board_key_delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/sheet/sync": {
         parameters: {
             query?: never;
@@ -655,8 +634,6 @@ export interface components {
              * @enum {string}
              */
             quota_unit: "usd_thousands" | "usd" | "units";
-            /** Board Key */
-            board_key: string | null;
         };
         /** AppSettingsUpdate */
         AppSettingsUpdate: {
@@ -1515,7 +1492,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -1545,7 +1521,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -1577,7 +1552,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -1609,10 +1583,7 @@ export interface operations {
     list_periods_api_periods_get: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-                "x-board-key"?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -1627,15 +1598,6 @@ export interface operations {
                     "application/json": components["schemas"]["PeriodOut"][];
                 };
             };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
         };
     };
     start_period_api_periods_post: {
@@ -1643,7 +1605,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -1679,7 +1640,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -1711,7 +1671,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path: {
                 period_id: number;
@@ -1745,7 +1704,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path: {
                 period_id: number;
@@ -1777,10 +1735,7 @@ export interface operations {
     current_period_api_periods_current_get: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-                "x-board-key"?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -1795,24 +1750,12 @@ export interface operations {
                     "application/json": components["schemas"]["PeriodOut"];
                 };
             };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
         };
     };
     period_board_api_periods__period_id__board_get: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-                "x-board-key"?: string | null;
-            };
+            header?: never;
             path: {
                 period_id: number;
             };
@@ -1845,7 +1788,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path: {
                 period_id: number;
@@ -1879,7 +1821,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path: {
                 period_id: number;
@@ -1920,7 +1861,6 @@ export interface operations {
             };
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -1952,7 +1892,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -1988,7 +1927,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path: {
                 deal_id: number;
@@ -2022,7 +1960,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path: {
                 deal_id: number;
@@ -2060,7 +1997,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path: {
                 deal_id: number;
@@ -2102,7 +2038,6 @@ export interface operations {
             };
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2140,7 +2075,6 @@ export interface operations {
             };
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2172,7 +2106,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2204,7 +2137,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2240,7 +2172,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path: {
                 rep_id: number;
@@ -2272,7 +2203,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path: {
                 rep_id: number;
@@ -2313,7 +2243,6 @@ export interface operations {
             };
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2345,7 +2274,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2381,7 +2309,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path: {
                 client_id: number;
@@ -2419,7 +2346,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path: {
                 client_id: number;
@@ -2454,7 +2380,6 @@ export interface operations {
             };
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2486,7 +2411,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2522,7 +2446,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path: {
                 item_id: number;
@@ -2560,7 +2483,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path: {
                 item_id: number;
@@ -2592,7 +2514,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2624,7 +2545,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2660,7 +2580,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path: {
                 flag_id: number;
@@ -2698,7 +2617,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path: {
                 flag_id: number;
@@ -2730,7 +2648,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2762,7 +2679,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2798,7 +2714,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path: {
                 user_id: number;
@@ -2830,7 +2745,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path: {
                 user_id: number;
@@ -2868,7 +2782,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path: {
                 user_id: number;
@@ -2904,7 +2817,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path: {
                 user_id: number;
@@ -2938,7 +2850,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2970,7 +2881,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -3001,76 +2911,11 @@ export interface operations {
             };
         };
     };
-    rotate_board_key_api_settings_board_key_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-                "x-board-key"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AppSettings"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    remove_board_key_api_settings_board_key_delete: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-                "x-board-key"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AppSettings"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     get_sync_api_sheet_sync_get: {
         parameters: {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -3102,7 +2947,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -3134,7 +2978,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path: {
                 kind: "client" | "item";
@@ -3168,7 +3011,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path: {
                 kind: "client" | "item";
@@ -3202,7 +3044,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -3238,7 +3079,6 @@ export interface operations {
             query?: never;
             header?: {
                 authorization?: string | null;
-                "x-board-key"?: string | null;
             };
             path: {
                 fix_id: number;

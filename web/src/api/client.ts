@@ -1,5 +1,5 @@
 import createClient from 'openapi-fetch'
-import { getBoardKey, getToken, notifyUnauthorized } from '../lib/session'
+import { getToken, notifyUnauthorized } from '../lib/session'
 import type { components, paths } from './schema'
 
 export const api = createClient<paths>({ baseUrl: import.meta.env.VITE_API_URL ?? '' })
@@ -7,13 +7,11 @@ export const api = createClient<paths>({ baseUrl: import.meta.env.VITE_API_URL ?
 api.use({
   onRequest({ request }) {
     const token = getToken()
-    const boardKey = getBoardKey()
     if (token) request.headers.set('Authorization', `Bearer ${token}`)
-    else if (boardKey) request.headers.set('X-Board-Key', boardKey)
     return request
   },
   onResponse({ request, response }) {
-    // Session expired, revoked, or the board key was rotated.
+    // Session expired or revoked.
     if (response.status === 401 && !request.url.endsWith('/api/auth/login')) notifyUnauthorized()
     return response
   },

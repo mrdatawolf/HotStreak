@@ -1,6 +1,5 @@
-// Per-device credentials: a sign-in token, or a read-only board key for TV displays.
+// Per-device sign-in token.
 const TOKEN_KEY = 'tracker-token'
-const BOARD_KEY = 'tracker-board-key'
 
 function read(key: string): string | null {
   try {
@@ -21,8 +20,8 @@ function write(key: string, value: string | null) {
 
 export const getToken = () => read(TOKEN_KEY)
 export const setToken = (token: string | null) => write(TOKEN_KEY, token)
-export const getBoardKey = () => read(BOARD_KEY)
-export const setBoardKey = (key: string | null) => write(BOARD_KEY, key)
+// Old TV links saved a board key; the board is public now, so just forget it.
+write('tracker-board-key', null)
 
 type Listener = () => void
 const unauthorizedListeners = new Set<Listener>()

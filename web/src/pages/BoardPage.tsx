@@ -88,16 +88,12 @@ export default function BoardPage() {
 
   if (!board) {
     // Keep the header so people can still reach Settings → Admin (e.g. to run the first sheet sync).
-    const isAdmin = me?.role === 'admin'
+    const isAdmin = !!me?.is_admin
     return (
       <main className="board">
         <header className="board-header">
           <h1>Sales board</h1>
-          <div className="board-controls">
-            {me && me.role !== 'board' && <Link to="/deals">Deals</Link>}
-            <Link to="/reports">Reports</Link>
-            <SettingsMenu />
-          </div>
+          <BoardNav />
         </header>
         <section className="board-empty">
           {noMonths ? (
@@ -123,7 +119,8 @@ export default function BoardPage() {
     )
   }
 
-  const canEdit = !!me && me.role !== 'board'
+  // Only admins change deals; everyone else (including signed-out visitors) just views the board.
+  const canEdit = !!me?.is_admin
   const here = periodId == null ? '/board' : `/board/${periodId}`
 
   return (
@@ -154,9 +151,7 @@ export default function BoardPage() {
               Add deal
             </Link>
           )}
-          {canEdit && <Link to="/deals">Deals</Link>}
-          <Link to="/reports">Reports</Link>
-          <SettingsMenu />
+          <BoardNav />
           <span className={error ? 'stale' : 'updated'}>
             {error ? `Offline — last update ${updatedAt?.toLocaleTimeString() ?? 'never'}` : `Updated ${updatedAt?.toLocaleTimeString()}`}
           </span>
@@ -179,6 +174,20 @@ export default function BoardPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+/** Links to the rest of the app. Signed-out visitors get only a sign-in link. */
+function BoardNav() {
+  const { me, loading } = useAuth()
+  if (loading) return null
+  if (!me) return <Link className="button" to="/login">Sign in</Link>
+  return (
+    <>
+      <Link to="/deals">Deals</Link>
+      <Link to="/reports">Reports</Link>
+      <SettingsMenu />
+    </>
   )
 }
 
@@ -233,6 +242,6 @@ function DealCard({ deal, href }: { deal: BoardDeal; href?: string }) {
       <p className="amount">{money(deal.total_cents)}</p>
     </article>
   )
-  // Signed-in users can open a deal to edit it; the TV display just shows it.
+  // Admins can open a deal to edit it; everyone else just sees it.
   return href ? <Link className="deal-link" to={href} aria-label={`Edit deal: ${deal.client_name}`}>{card}</Link> : card
 }

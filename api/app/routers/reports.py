@@ -8,8 +8,7 @@ from ..db import get_session
 from ..reports import build_report, month_index
 from ..trends import build_trends, current_month
 
-# Read-only, so TV displays (board key) can show it too.
-router = APIRouter(prefix="/reports", tags=["reports"], dependencies=[Depends(auth.require_viewer)])
+router = APIRouter(prefix="/reports", tags=["reports"], dependencies=[Depends(auth.require_user)])
 
 MAX_MONTHS = 120
 MONTH = re.compile(r"^(\d{4})-(\d{2})$")

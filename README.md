@@ -114,14 +114,15 @@ powershell -ExecutionPolicy Bypass -File windows\service.ps1 stop       # also: 
 
 - **Admin** — everything, including the Admin screens (sheet sync, users, reps, quotas, items, clients, client
   names, flags, settings).
-- **User** — views the board and enters, edits, and deletes deals in unlocked months.
+- **User** — views the board, the Deals list and Reports; can't add, edit, or delete deals.
+- **Signed out** — anyone who opens the app sees the board (every rep's deals for the month) with only a
+  *Sign in* button; everything else needs a sign-in.
 - **Break-glass** — the super admin defined in `.env`, for first-time setup and recovery if every admin is
   locked out. It has no database row, so it can't be deleted, disabled, or locked out, and always has full access.
   Failed attempts are slowed down and logged. Blank the password in `.env` to turn it off (existing break-glass
   sign-ins stop working immediately). Changing it takes effect when the API restarts.
-- **TV display** — Admin → Settings → *Create TV link*. Opening that link once on a TV saves a read-only key on
-  that device; it can view the board and Reports (read-only) and nothing else. *New link* disconnects every display
-  using the old one.
+- **TV display** — just open `/board`; it's public, so no sign-in or key is needed, and it shows only the board.
+  Admin → Settings shows the address to copy. Old TV links with `?key=` still work (the key is ignored).
 
 Accounts lock for 15 minutes after 5 wrong passwords; an admin can unlock early or reset the password.
 The API refuses to demote, deactivate, or delete the last active admin. Passwords are hashed with scrypt;
@@ -129,7 +130,7 @@ only a hash of each session token is stored. Sign-in tokens are kept in the brow
 
 ## Deals and months
 
-- **Deals** (any signed-in user): *Add deal* on the board or the Deals page. Pick a rep and client (type to search,
+- **Deals** (admins; users can view the Deals list read-only): *Add deal* on the board or the Deals page. Pick a rep and client (type to search,
   or choose *+ New client* to add one with an optional branch), then one or more item lines — pick from the catalog
   or type free text like "Various". The total adds up the line amounts unless you type your own. Click a deal card
   on the board, or a row on the Deals page, to edit or delete it. Each deal records who entered and last changed it.
@@ -140,7 +141,7 @@ only a hash of each session token is stored. Sign-in tokens are kept in the brow
 
 ## Reports
 
-Any signed-in user, and TV displays; refreshes every 5 minutes. One page per header button, sharing the filters
+Any signed-in user (not signed-out visitors or the TV); refreshes every 5 minutes. One page per header button, sharing the filters
 (range, rep, **brand** and/or **model**; they carry over between pages). Every chart has a table view.
 
 - **Overview** (`/reports`) — total sales, deals, average deal, quota attainment, units, active/new/repeat clients

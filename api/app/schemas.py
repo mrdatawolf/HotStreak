@@ -198,8 +198,6 @@ class FlagIn(BaseModel):
 
 class AppSettings(BaseModel):
     quota_unit: QuotaUnit
-    # Only returned to admins.
-    board_key: str | None
 
 
 class AppSettingsUpdate(BaseModel):

@@ -30,7 +30,7 @@ def logout(principal: auth.Principal = Depends(auth.require_user), db: Session =
 
 
 @router.get("/me", response_model=schemas.Me)
-def me(principal: auth.Principal = Depends(auth.require_viewer)):
+def me(principal: auth.Principal = Depends(auth.require_user)):
     return me_out(principal)
 
 

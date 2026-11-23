@@ -88,22 +88,6 @@
               ],
               "title": "Authorization"
             }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
           }
         ],
         "responses": {
@@ -145,22 +129,6 @@
                 }
               ],
               "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
             }
           }
         ],
@@ -211,22 +179,6 @@
               ],
               "title": "Authorization"
             }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
           }
         ],
         "requestBody": {
@@ -263,40 +215,6 @@
         ],
         "summary": "List Periods",
         "operationId": "list_periods_api_periods_get",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -308,16 +226,6 @@
                     "$ref": "#/components/schemas/PeriodOut"
                   },
                   "title": "Response List Periods Api Periods Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -346,22 +254,6 @@
                 }
               ],
               "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
             }
           }
         ],
@@ -430,22 +322,6 @@
               ],
               "title": "Authorization"
             }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
           }
         ],
         "responses": {
@@ -509,22 +385,6 @@
               ],
               "title": "Authorization"
             }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
           }
         ],
         "responses": {
@@ -583,22 +443,6 @@
               ],
               "title": "Authorization"
             }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
           }
         ],
         "responses": {
@@ -633,40 +477,6 @@
         "summary": "Current Period",
         "description": "The newest unlocked month, falling back to the newest month.",
         "operationId": "current_period_api_periods_current_get",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -674,16 +484,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PeriodOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -706,38 +506,6 @@
             "schema": {
               "type": "integer",
               "title": "Period Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
             }
           }
         ],
@@ -796,22 +564,6 @@
                 }
               ],
               "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
             }
           }
         ],
@@ -873,22 +625,6 @@
                 }
               ],
               "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
             }
           }
         ],
@@ -989,22 +725,6 @@
               ],
               "title": "Authorization"
             }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
           }
         ],
         "responses": {
@@ -1055,22 +775,6 @@
                 }
               ],
               "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
             }
           }
         ],
@@ -1140,22 +844,6 @@
               ],
               "title": "Authorization"
             }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
           }
         ],
         "responses": {
@@ -1211,22 +899,6 @@
                 }
               ],
               "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
             }
           }
         ],
@@ -1293,22 +965,6 @@
                 }
               ],
               "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
             }
           }
         ],
@@ -1440,22 +1096,6 @@
               ],
               "title": "Authorization"
             }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
           }
         ],
         "responses": {
@@ -1558,22 +1198,6 @@
               ],
               "title": "Authorization"
             }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
           }
         ],
         "responses": {
@@ -1622,22 +1246,6 @@
                 }
               ],
               "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
             }
           }
         ],
@@ -1689,22 +1297,6 @@
                 }
               ],
               "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
             }
           }
         ],
@@ -1774,22 +1366,6 @@
               ],
               "title": "Authorization"
             }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
           }
         ],
         "requestBody": {
@@ -1855,22 +1431,6 @@
                 }
               ],
               "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
             }
           }
         ],
@@ -1940,22 +1500,6 @@
               ],
               "title": "Authorization"
             }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
           }
         ],
         "responses": {
@@ -2006,22 +1550,6 @@
                 }
               ],
               "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
             }
           }
         ],
@@ -2091,22 +1619,6 @@
               ],
               "title": "Authorization"
             }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
           }
         ],
         "requestBody": {
@@ -2172,22 +1684,6 @@
                 }
               ],
               "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
             }
           }
         ],
@@ -2257,22 +1753,6 @@
               ],
               "title": "Authorization"
             }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
           }
         ],
         "responses": {
@@ -2323,22 +1803,6 @@
                 }
               ],
               "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
             }
           }
         ],
@@ -2408,22 +1872,6 @@
               ],
               "title": "Authorization"
             }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
           }
         ],
         "requestBody": {
@@ -2490,22 +1938,6 @@
               ],
               "title": "Authorization"
             }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
           }
         ],
         "responses": {
@@ -2547,22 +1979,6 @@
                 }
               ],
               "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
             }
           }
         ],
@@ -2614,22 +2030,6 @@
                 }
               ],
               "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
             }
           }
         ],
@@ -2699,22 +2099,6 @@
               ],
               "title": "Authorization"
             }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
           }
         ],
         "requestBody": {
@@ -2782,22 +2166,6 @@
               ],
               "title": "Authorization"
             }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
           }
         ],
         "responses": {
@@ -2839,22 +2207,6 @@
                 }
               ],
               "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
             }
           }
         ],
@@ -2906,22 +2258,6 @@
                 }
               ],
               "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
             }
           }
         ],
@@ -2991,22 +2327,6 @@
               ],
               "title": "Authorization"
             }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
           }
         ],
         "requestBody": {
@@ -3073,22 +2393,6 @@
               ],
               "title": "Authorization"
             }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
           }
         ],
         "responses": {
@@ -3139,22 +2443,6 @@
                 }
               ],
               "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
             }
           }
         ],
@@ -3217,22 +2505,6 @@
               ],
               "title": "Authorization"
             }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
           }
         ],
         "responses": {
@@ -3282,22 +2554,6 @@
               ],
               "title": "Authorization"
             }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
           }
         ],
         "responses": {
@@ -3345,22 +2601,6 @@
               ],
               "title": "Authorization"
             }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
           }
         ],
         "requestBody": {
@@ -3373,135 +2613,6 @@
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AppSettings"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/settings/board-key": {
-      "post": {
-        "tags": [
-          "settings"
-        ],
-        "summary": "Rotate Board Key",
-        "description": "Create or replace the read-only key for TV displays. Displays using the old key stop working.",
-        "operationId": "rotate_board_key_api_settings_board_key_post",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AppSettings"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "settings"
-        ],
-        "summary": "Remove Board Key",
-        "operationId": "remove_board_key_api_settings_board_key_delete",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -3549,22 +2660,6 @@
               ],
               "title": "Authorization"
             }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
           }
         ],
         "responses": {
@@ -3611,22 +2706,6 @@
                 }
               ],
               "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
             }
           }
         ],
@@ -3689,22 +2768,6 @@
                 }
               ],
               "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
             }
           }
         ],
@@ -3773,22 +2836,6 @@
               ],
               "title": "Authorization"
             }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
           }
         ],
         "responses": {
@@ -3841,22 +2888,6 @@
                 }
               ],
               "title": "Authorization"
-            }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
             }
           }
         ],
@@ -3926,22 +2957,6 @@
               ],
               "title": "Authorization"
             }
-          },
-          {
-            "name": "x-board-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Board-Key"
-            }
           }
         ],
         "responses": {
@@ -3974,23 +2989,11 @@
               "units"
             ],
             "title": "Quota Unit"
-          },
-          "board_key": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Board Key"
           }
         },
         "type": "object",
         "required": [
-          "quota_unit",
-          "board_key"
+          "quota_unit"
         ],
         "title": "AppSettings"
       },

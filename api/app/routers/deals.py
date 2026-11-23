@@ -1,4 +1,4 @@
-"""Deal entry. Any signed-in user can add, edit, or delete deals in an unlocked month."""
+"""Deal entry. Signed-in users can view deals; only admins add, edit, or delete them (in an unlocked month)."""
 
 import calendar
 
@@ -154,7 +154,7 @@ def get_deal(deal_id: int, db: Session = Depends(get_session)):
 
 @router.post("", response_model=schemas.DealOut, status_code=status.HTTP_201_CREATED)
 def create_deal(
-    body: schemas.DealIn, principal: auth.Principal = Depends(auth.require_user), db: Session = Depends(get_session)
+    body: schemas.DealIn, principal: auth.Principal = Depends(auth.require_admin), db: Session = Depends(get_session)
 ):
     deal = models.Deal(created_by_id=principal.user_id)
     apply(db, deal, body, principal)
@@ -167,7 +167,7 @@ def create_deal(
 def update_deal(
     deal_id: int,
     body: schemas.DealIn,
-    principal: auth.Principal = Depends(auth.require_user),
+    principal: auth.Principal = Depends(auth.require_admin),
     db: Session = Depends(get_session),
 ):
     deal = load_deal(db, deal_id)
@@ -180,7 +180,7 @@ def update_deal(
     return deal_out(load_deal(db, deal.id))
 
 
-@router.delete("/{deal_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{deal_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(auth.require_admin)])
 def delete_deal(deal_id: int, db: Session = Depends(get_session)):
     deal = load_deal(db, deal_id)
     not_from_sheet(deal)

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { api, errorMessage, type Me } from '../api/client'
-import { getBoardKey, getToken, onUnauthorized, setBoardKey, setToken } from '../lib/session'
+import { getToken, onUnauthorized, setToken } from '../lib/session'
 
 type AuthState = {
   me: Me | null
@@ -8,7 +8,7 @@ type AuthState = {
   login: (username: string, password: string) => Promise<string | null>
   /** Signs out and reloads to /login. */
   logout: () => Promise<void>
-  /** Re-check credentials, e.g. after a board key was saved from the URL. */
+  /** Re-check the saved sign-in. */
   refresh: () => Promise<void>
 }
 
@@ -19,7 +19,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   const refresh = useCallback(async () => {
-    if (!getToken() && !getBoardKey()) {
+    if (!getToken()) {
       setMe(null)
       setLoading(false)
       return
@@ -33,9 +33,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // oxlint-disable-next-line react/set-state-in-effect -- state is set after the request resolves
     void refresh()
     return onUnauthorized(() => {
-      // The token or board key stopped working; forget it so the user lands on the sign-in page.
-      if (getToken()) setToken(null)
-      else setBoardKey(null)
+      // The token stopped working; forget it so the user lands on the sign-in page.
+      setToken(null)
       setMe(null)
     })
   }, [refresh])

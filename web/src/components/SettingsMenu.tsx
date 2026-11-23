@@ -59,7 +59,7 @@ export default function SettingsMenu() {
       </button>
       {open && (
         <div className="menu-panel" id={panelId}>
-          {me && !me.is_breakglass && me.role !== 'board' && (
+          {me && !me.is_breakglass && (
             <div className="menu-group">
               <NavLink to="/account">My account <span className="muted">({me.name})</span></NavLink>
             </div>

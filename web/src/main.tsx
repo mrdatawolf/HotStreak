@@ -5,7 +5,6 @@ import { AuthProvider } from './auth/AuthContext'
 import { RequireAuth } from './auth/guards'
 import AppLayout from './components/AppLayout'
 import { applyFont, loadFontChoice } from './lib/fonts'
-import { setBoardKey } from './lib/session'
 import AccountPage from './pages/AccountPage'
 import DealFormPage from './pages/DealFormPage'
 import DealsPage from './pages/DealsPage'
@@ -33,11 +32,9 @@ import './app.css'
 // Restore this device's font choice before first render.
 applyFont(loadFontChoice(), false)
 
-// A TV link (/board?key=...) saves the read-only key on this device, then drops it from the address bar.
+// Old TV links (/board?key=...) still work: the board is public, so just drop the key from the address bar.
 const url = new URL(window.location.href)
-const key = url.searchParams.get('key')
-if (key) {
-  setBoardKey(key)
+if (url.searchParams.has('key')) {
   url.searchParams.delete('key')
   window.history.replaceState(null, '', url.pathname + url.search + url.hash)
 }
@@ -48,11 +45,10 @@ createRoot(document.getElementById('root')!).render(
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          {/* /board always follows the current month, so the TV never needs changing. */}
-          <Route path="/board" element={<RequireAuth need="viewer"><BoardPage /></RequireAuth>} />
-          <Route path="/board/:periodId" element={<RequireAuth need="viewer"><BoardPage /></RequireAuth>} />
-          {/* Read-only pages: open to TV displays too. */}
-          <Route element={<RequireAuth need="viewer"><AppLayout /></RequireAuth>}>
+          {/* The board is public. /board always follows the current month, so the TV never needs changing. */}
+          <Route path="/board" element={<BoardPage />} />
+          <Route path="/board/:periodId" element={<BoardPage />} />
+          <Route element={<RequireAuth need="user"><AppLayout /></RequireAuth>}>
             <Route path="/reports" element={<ReportsLayout />}>
               <Route index element={<ReportsOverviewPage />} />
               <Route path="reps" element={<ReportsRepsPage />} />
@@ -63,7 +59,10 @@ createRoot(document.getElementById('root')!).render(
           </Route>
           <Route element={<RequireAuth need="user"><AppLayout /></RequireAuth>}>
             <Route path="/account" element={<AccountPage />} />
+            {/* Users can browse deals; only admins add, edit, or delete them. */}
             <Route path="/deals" element={<DealsPage />} />
+          </Route>
+          <Route element={<RequireAuth need="admin"><AppLayout /></RequireAuth>}>
             <Route path="/deals/new" element={<DealFormPage />} />
             <Route path="/deals/:dealId" element={<DealFormPage key="edit" />} />
           </Route>

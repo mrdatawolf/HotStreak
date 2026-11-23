@@ -13,7 +13,7 @@ export default function SettingsPage() {
   const [message, setMessage] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
-  const boardUrl = data?.board_key ? `${window.location.origin}/board?key=${encodeURIComponent(data.board_key)}` : null
+  const boardUrl = `${window.location.origin}/board`
 
   async function act(call: () => Promise<{ error?: unknown }>) {
     const { error } = await call()
@@ -41,27 +41,15 @@ export default function SettingsPage() {
       <div className="panel settings-block">
         <h2>TV display link</h2>
         <p className="lede">
-          Open this link once on the office TV. It remembers the key and shows the board without anyone signing in.
-          The key only opens the board — nothing else. Making a new link disconnects every display using the old one.
+          The board is public, so the office TV just opens this address — no sign-in or key needed. It shows the board
+          only; Reports and everything else need a sign-in.
         </p>
-        {boardUrl ? (
-          <>
-            <div className="copy-row">
-              <input readOnly aria-label="TV display link" value={boardUrl} onFocus={(e) => e.target.select()} />
-              <button onClick={async () => { await navigator.clipboard.writeText(boardUrl); setCopied(true) }}>
-                {copied ? 'Copied' : 'Copy'}
-              </button>
-            </div>
-            <div className="row-actions">
-              <button onClick={() => confirm('Make a new link? Displays using the current one will stop working.')
-                && act(() => api.POST('/api/settings/board-key'))}>New link</button>
-              <button className="danger" onClick={() => confirm('Turn off the TV link? Displays using it will stop working.')
-                && act(() => api.DELETE('/api/settings/board-key'))}>Turn off</button>
-            </div>
-          </>
-        ) : (
-          <button className="primary" onClick={() => act(() => api.POST('/api/settings/board-key'))}>Create TV link</button>
-        )}
+        <div className="copy-row">
+          <input readOnly aria-label="TV display link" value={boardUrl} onFocus={(e) => e.target.select()} />
+          <button onClick={async () => { await navigator.clipboard.writeText(boardUrl); setCopied(true) }}>
+            {copied ? 'Copied' : 'Copy'}
+          </button>
+        </div>
       </div>
     </section>
   )
