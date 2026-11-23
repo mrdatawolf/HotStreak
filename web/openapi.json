@@ -991,6 +991,7 @@
           "reports"
         ],
         "summary": "Report",
+        "description": "Admins see the team or any rep; users always get their own rep, whatever rep_id says.",
         "operationId": "report_api_reports_get",
         "parameters": [
           {
@@ -1128,7 +1129,7 @@
           "reports"
         ],
         "summary": "Trends",
-        "description": "Whole-history trends and quarter/year forecasts, up to the current month.",
+        "description": "Whole-history trends and quarter/year forecasts, up to the current month. Users get their own rep only.",
         "operationId": "trends_api_reports_trends_get",
         "parameters": [
           {
@@ -4230,6 +4231,28 @@
           "is_breakglass": {
             "type": "boolean",
             "title": "Is Breakglass"
+          },
+          "rep_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rep Id"
+          },
+          "rep_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rep Name"
           }
         },
         "type": "object",
@@ -4239,7 +4262,9 @@
           "email",
           "role",
           "is_admin",
-          "is_breakglass"
+          "is_breakglass",
+          "rep_id",
+          "rep_name"
         ],
         "title": "Me"
       },
@@ -5366,6 +5391,17 @@
             "maxLength": 200,
             "minLength": 10,
             "title": "Password"
+          },
+          "rep_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rep Id"
           }
         },
         "type": "object",
@@ -5418,6 +5454,28 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "rep_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rep Id"
+          },
+          "rep_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rep Name"
           }
         },
         "type": "object",
@@ -5428,7 +5486,9 @@
           "role",
           "active",
           "locked_until",
-          "created_at"
+          "created_at",
+          "rep_id",
+          "rep_name"
         ],
         "title": "UserOut"
       },
@@ -5485,6 +5545,17 @@
               }
             ],
             "title": "Active"
+          },
+          "rep_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rep Id"
           }
         },
         "type": "object",

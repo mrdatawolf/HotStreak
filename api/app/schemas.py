@@ -83,6 +83,9 @@ class Me(BaseModel):
     role: str
     is_admin: bool
     is_breakglass: bool
+    # Users only see this rep's sales in reports; null for an admin (everything) or an unlinked user.
+    rep_id: int | None
+    rep_name: str | None
 
 
 class LoginOut(BaseModel):
@@ -108,6 +111,8 @@ class UserOut(BaseModel):
     active: bool
     locked_until: datetime | None
     created_at: datetime
+    rep_id: int | None
+    rep_name: str | None
 
 
 class UserCreate(BaseModel):
@@ -115,6 +120,8 @@ class UserCreate(BaseModel):
     email: Email
     role: Role = "user"
     password: Password
+    # Required for role "user": the rep whose sales they see. Optional for admins.
+    rep_id: int | None = None
 
 
 class UserUpdate(BaseModel):
@@ -122,6 +129,7 @@ class UserUpdate(BaseModel):
     email: Email | None = None
     role: Role | None = None
     active: bool | None = None
+    rep_id: int | None = None
 
 
 class SetPasswordIn(BaseModel):

@@ -40,8 +40,8 @@ def data(session):
     return {"alex": alex, "bob": bob, "house": house}
 
 
-def test_report_numbers(user_client, data):
-    r = user_client.get("/api/reports?start=2026-08&end=2026-09").json()
+def test_report_numbers(admin_client, data):
+    r = admin_client.get("/api/reports?start=2026-08&end=2026-09").json()
 
     k = r["kpis"]
     assert k["sales_cents"] == 3_300_000  # HOUSE left out
@@ -78,30 +78,30 @@ def test_report_numbers(user_client, data):
     assert sizes["$10–25K"] == 2 and sizes["$2.5–5K"] == 1 and sizes["$25K+"] == 0
 
 
-def test_rep_filter_includes_house_when_asked(user_client, data):
-    r = user_client.get(f"/api/reports?start=2026-09&end=2026-09&rep_id={data['house'].id}").json()
+def test_rep_filter_includes_house_when_asked(admin_client, data):
+    r = admin_client.get(f"/api/reports?start=2026-09&end=2026-09&rep_id={data['house'].id}").json()
     assert r["kpis"]["sales_cents"] == 999_900
     assert [x["name"] for x in r["reps"]] == ["HOUSE"]
 
 
-def test_default_range_is_12_months_to_current(user_client, data):
-    r = user_client.get("/api/reports").json()
+def test_default_range_is_12_months_to_current(admin_client, data):
+    r = admin_client.get("/api/reports").json()
     assert (r["end"], r["start"]) == ({"year": 2026, "month": 9}, {"year": 2025, "month": 10})
     assert len(r["monthly"]) == 12
 
 
 @pytest.mark.parametrize("query", ["start=2026-9", "start=2026-13", "start=2026-09&end=2026-08",
                                    "start=2000-01&end=2026-09", "rep_id=999"])
-def test_bad_params(user_client, data, query):
-    assert user_client.get(f"/api/reports?{query}").status_code == 422
+def test_bad_params(admin_client, data, query):
+    assert admin_client.get(f"/api/reports?{query}").status_code == 422
 
 
 def test_reports_need_sign_in(client, data):
     assert client.get("/api/reports").status_code == 401
 
 
-def test_brand_breakdown(user_client, data):
-    r = user_client.get("/api/reports?start=2026-08&end=2026-09").json()
+def test_brand_breakdown(admin_client, data):
+    r = admin_client.get("/api/reports?start=2026-08&end=2026-09").json()
     brands = {b["label"]: (b["sales_cents"], b["count"]) for b in r["brands"]}
     assert brands == {"Sharp": (2_500_000, 3), "PaperCut": (700_000, 3), "(no brand)": (100_000, 1)}
     assert r["mix_by"] == "brand" and r["mix_series"] == ["Sharp", "PaperCut", "(no brand)"]
@@ -109,8 +109,8 @@ def test_brand_breakdown(user_client, data):
     assert r["filtered"] is False
 
 
-def test_filter_by_brand(user_client, data):
-    r = user_client.get("/api/reports", params={"start": "2026-08", "end": "2026-09", "brand": "PaperCut"}).json()
+def test_filter_by_brand(admin_client, data):
+    r = admin_client.get("/api/reports", params={"start": "2026-08", "end": "2026-09", "brand": "PaperCut"}).json()
     k = r["kpis"]
     # PaperCut's share: 500,000 of Alex's Sep deal + 200,000 of Bob's.
     assert (k["sales_cents"], k["deal_count"], k["units"]) == (700_000, 2, 3)
@@ -122,10 +122,32 @@ def test_filter_by_brand(user_client, data):
     assert {x["name"]: x["sales_cents"] for x in r["reps"]} == {"ALEX": 500_000, "BOB": 200_000}
 
 
-def test_filter_by_item_and_no_brand(user_client, data, session):
+def test_filter_by_item_and_no_brand(admin_client, data, session):
     mfp = session.query(models.Item).filter_by(model="BP-70M75").one()
-    r = user_client.get("/api/reports", params={"start": "2026-08", "end": "2026-09", "item_id": mfp.id}).json()
+    r = admin_client.get("/api/reports", params={"start": "2026-08", "end": "2026-09", "item_id": mfp.id}).json()
     assert r["kpis"]["sales_cents"] == 2_500_000 and r["kpis"]["deal_count"] == 2
-    r = user_client.get("/api/reports", params={"start": "2026-08", "end": "2026-09", "brand": "(no brand)"}).json()
+    r = admin_client.get("/api/reports", params={"start": "2026-08", "end": "2026-09", "brand": "(no brand)"}).json()
     assert r["kpis"]["sales_cents"] == 100_000  # HOUSE's "Various" isn't in the team total
-    assert user_client.get("/api/reports", params={"item_id": 9999}).status_code == 422
+    assert admin_client.get("/api/reports", params={"item_id": 9999}).status_code == 422
+
+
+def test_users_only_see_their_own_rep(admin_client, client, session, data):
+    from .conftest import make_user, sign_in
+
+    make_user(session, "bob@example.com", rep=data["bob"])
+    bob = sign_in(client.__class__(client.app), "bob@example.com")
+    assert bob.get("/api/auth/me").json()["rep_name"] == "BOB"
+
+    as_admin = admin_client.get(f"/api/reports?start=2026-08&end=2026-09&rep_id={data['bob'].id}").json()
+    for query in ("", f"&rep_id={data['alex'].id}"):  # no rep, or someone else's: still Bob's figures
+        r = bob.get(f"/api/reports?start=2026-08&end=2026-09{query}").json()
+        assert r == as_admin
+        assert [row["name"] for row in r["reps"]] == ["BOB"]
+    trends = bob.get(f"/api/reports/trends?rep_id={data['alex'].id}").json()
+    assert trends == admin_client.get(f"/api/reports/trends?rep_id={data['bob'].id}").json()
+
+    make_user(session, "new@example.com")
+    unlinked = sign_in(client.__class__(client.app), "new@example.com")
+    for path in ("/api/reports", "/api/reports/trends"):
+        res = unlinked.get(path)
+        assert res.status_code == 403 and "isn't linked to a rep" in res.json()["detail"]

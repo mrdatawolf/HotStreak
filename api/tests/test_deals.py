@@ -146,13 +146,33 @@ def test_deals_need_sign_in(client, ref):
 
 def test_users_can_view_but_not_change_deals(admin_client, client, session, ref):
     deal = admin_client.post("/api/deals", json=deal_body(ref)).json()
-    make_user(session, "viewer@example.com")
+    make_user(session, "viewer@example.com", rep=ref["rep"])
     viewer = sign_in(client.__class__(client.app), "viewer@example.com")
     assert viewer.get("/api/deals").status_code == 200
     assert viewer.get(f"/api/deals/{deal['id']}").status_code == 200
     assert viewer.post("/api/deals", json=deal_body(ref)).status_code == 403
     assert viewer.put(f"/api/deals/{deal['id']}", json=deal_body(ref)).status_code == 403
     assert viewer.delete(f"/api/deals/{deal['id']}").status_code == 403
+
+
+def test_users_only_see_their_reps_deals(admin_client, client, session, ref):
+    other = models.Rep(name="BOB")
+    session.add(other)
+    session.commit()
+    mine = admin_client.post("/api/deals", json=deal_body(ref)).json()
+    theirs = admin_client.post("/api/deals", json=deal_body(ref, rep_id=other.id)).json()
+
+    make_user(session, "alex@example.com", rep=ref["rep"])
+    alex = sign_in(client.__class__(client.app), "alex@example.com")
+    assert [d["id"] for d in alex.get("/api/deals").json()] == [mine["id"]]
+    # Asking for another rep still returns only their own.
+    assert [d["id"] for d in alex.get(f"/api/deals?rep_id={other.id}").json()] == [mine["id"]]
+    assert alex.get(f"/api/deals/{theirs['id']}").status_code == 404
+
+    make_user(session, "new@example.com")
+    unlinked = sign_in(client.__class__(client.app), "new@example.com")
+    res = unlinked.get("/api/deals")
+    assert res.status_code == 403 and "isn't linked to a rep" in res.json()["detail"]
 
 
 def test_breakglass_can_enter_deals(client, ref):

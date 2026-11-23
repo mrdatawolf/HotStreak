@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation, useSearchParams } from 'react-router'
 import { api, errorMessage, type Item, type Report } from '../../api/client'
+import { useAuth } from '../../auth/AuthContext'
 import { useLoad } from '../../lib/useLoad'
 import { itemLabel, long, NO_BRAND, REPORT_PAGES, ym, type ReportContext } from './shared'
 
@@ -19,12 +20,15 @@ const PRESETS = [
 export default function ReportsLayout() {
   const [params, setParams] = useSearchParams()
   const { pathname } = useLocation()
+  // Users always see their own rep (the API enforces it); only admins pick a rep or the whole team.
+  const { me } = useAuth()
+  const isAdmin = !!me?.is_admin
   const periods = useLoad(useCallback(() => api.GET('/api/periods'), []))
   const reps = useLoad(useCallback(() => api.GET('/api/reps'), []))
   const catalog = useLoad(useCallback(() => api.GET('/api/items', { params: { query: { limit: 1000 } } }), []))
 
   const preset = params.get('range') ?? 'last12'
-  const repId = params.get('rep') ? Number(params.get('rep')) : undefined
+  const repId = isAdmin && params.get('rep') ? Number(params.get('rep')) : (isAdmin ? undefined : me?.rep_id ?? undefined)
   const brand = params.get('brand') ?? undefined
   const itemId = params.get('item') ? Number(params.get('item')) : undefined
 
@@ -134,13 +138,17 @@ export default function ReportsLayout() {
             </label>
           </>
         )}
-        <label className="inline-label">
-          Rep
-          <select value={repId ?? ''} onChange={(e) => setParam('rep', e.target.value || undefined)}>
-            <option value="">Whole team</option>
-            {reps.data?.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
-          </select>
-        </label>
+        {isAdmin ? (
+          <label className="inline-label">
+            Rep
+            <select value={repId ?? ''} onChange={(e) => setParam('rep', e.target.value || undefined)}>
+              <option value="">Whole team</option>
+              {reps.data?.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+            </select>
+          </label>
+        ) : me?.rep_name && (
+          <span className="inline-label">Rep <strong>{me.rep_name}</strong></span>
+        )}
         <label className="inline-label">
           Brand
           <select value={brand ?? ''} onChange={(e) => pickBrand(e.target.value || undefined)}>

@@ -38,8 +38,9 @@ def client(session):
     app.dependency_overrides.clear()
 
 
-def make_user(session, email, role="user", name=None):
-    user = models.User(name=name or email.split("@")[0], email=email, role=role, password_hash=auth.hash_password(PASSWORD))
+def make_user(session, email, role="user", name=None, rep=None):
+    user = models.User(name=name or email.split("@")[0], email=email, role=role, rep=rep,
+                       password_hash=auth.hash_password(PASSWORD))
     session.add(user)
     session.commit()
     return user

@@ -51,6 +51,15 @@ class User(Base):
     failed_logins: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     locked_until: Mapped[datetime | None] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    # Whose sales this person's reports show. Required for role "user" (the API enforces it);
+    # optional for admins, who see everything. Several users may share a rep.
+    rep_id: Mapped[int | None] = mapped_column(ForeignKey("reps.id"), index=True)
+
+    rep: Mapped["Rep | None"] = relationship()
+
+    @property
+    def rep_name(self) -> str | None:
+        return self.rep.name if self.rep else None
 
 
 class AuthSession(Base):

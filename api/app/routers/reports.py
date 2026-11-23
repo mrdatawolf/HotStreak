@@ -42,8 +42,11 @@ def report(
     rep_id: int | None = None,
     brand: str | None = Query(None, description='Only this brand\'s items ("(no brand)" for items without one)'),
     item_id: int | None = Query(None, description="Only this catalog item (model)"),
+    principal: auth.Principal = Depends(auth.require_user),
     db: Session = Depends(get_session),
 ):
+    """Admins see the team or any rep; users always get their own rep, whatever rep_id says."""
+    rep_id = auth.scoped_rep_id(principal, rep_id)
     if end:
         end_i = parse_month(end, "end")
     else:
@@ -62,9 +65,11 @@ def trends(
     rep_id: int | None = None,
     brand: str | None = Query(None, description='Only this brand\'s items ("(no brand)" for items without one)'),
     item_id: int | None = Query(None, description="Only this catalog item (model)"),
+    principal: auth.Principal = Depends(auth.require_user),
     db: Session = Depends(get_session),
 ):
-    """Whole-history trends and quarter/year forecasts, up to the current month."""
+    """Whole-history trends and quarter/year forecasts, up to the current month. Users get their own rep only."""
+    rep_id = auth.scoped_rep_id(principal, rep_id)
     cur = require_current(db)
     check_filters(db, rep_id, item_id)
     return build_trends(db, cur, rep_id, brand or None, item_id)

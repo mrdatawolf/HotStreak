@@ -15,7 +15,8 @@ export default function DealsPage() {
 
   const current = periods.data?.find((p) => !p.locked_at) ?? periods.data?.[0]
   const periodId = params.get('period') ? Number(params.get('period')) : current?.id
-  const repId = params.get('rep') ? Number(params.get('rep')) : undefined
+  // Users only ever get their own rep's deals (the API enforces it), so only admins pick a rep.
+  const repId = canEdit && params.get('rep') ? Number(params.get('rep')) : undefined
   const q = params.get('q') ?? ''
   const period = periods.data?.find((p) => p.id === periodId)
 
@@ -51,13 +52,15 @@ export default function DealsPage() {
             ))}
           </select>
         </label>
-        <label className="inline-label">
-          Rep
-          <select value={repId ?? ''} onChange={(e) => setParam('rep', e.target.value)}>
-            <option value="">All reps</option>
-            {reps.data?.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-          </select>
-        </label>
+        {canEdit && (
+          <label className="inline-label">
+            Rep
+            <select value={repId ?? ''} onChange={(e) => setParam('rep', e.target.value)}>
+              <option value="">All reps</option>
+              {reps.data?.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+          </label>
+        )}
         <input type="search" placeholder="Search client, item, notes…" aria-label="Search deals" value={q}
           onChange={(e) => setParam('q', e.target.value)} />
         {canEdit && period && !period.locked_at && (

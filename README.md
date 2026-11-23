@@ -114,7 +114,11 @@ powershell -ExecutionPolicy Bypass -File windows\service.ps1 stop       # also: 
 
 - **Admin** — everything, including the Admin screens (sheet sync, users, reps, quotas, items, clients, client
   names, flags, settings).
-- **User** — views the board, the Deals list and Reports; can't add, edit, or delete deals.
+- **User** — views the whole board, plus Reports and the Deals list for **their own rep only**; can't add, edit,
+  or delete deals. An admin links each user to a rep when adding them (Admin → Users; required for users,
+  several users can share a rep). The API ignores any other rep a user asks for. A user with no rep (e.g. one
+  created before this existed, shown as *Needs rep*) sees the board but gets "not linked to a rep" on Reports and
+  Deals. A rep with users linked can't be deleted.
 - **Signed out** — anyone who opens the app sees the board (every rep's deals for the month) with only a
   *Sign in* button; everything else needs a sign-in.
 - **Break-glass** — the super admin defined in `.env`, for first-time setup and recovery if every admin is
@@ -141,7 +145,8 @@ only a hash of each session token is stored. Sign-in tokens are kept in the brow
 
 ## Reports
 
-Any signed-in user (not signed-out visitors or the TV); refreshes every 5 minutes. One page per header button, sharing the filters
+Admins see the whole team or any rep; users see only their own rep (no rep filter). Not available to signed-out
+visitors or the TV; refreshes every 5 minutes. One page per header button, sharing the filters
 (range, rep, **brand** and/or **model**; they carry over between pages). Every chart has a table view.
 
 - **Overview** (`/reports`) — total sales, deals, average deal, quota attainment, units, active/new/repeat clients

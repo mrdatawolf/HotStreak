@@ -10,7 +10,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 def me_out(p: auth.Principal) -> schemas.Me:
     return schemas.Me(
-        user_id=p.user_id, name=p.name, email=p.email, role=p.role, is_admin=p.is_admin, is_breakglass=p.is_breakglass
+        user_id=p.user_id, name=p.name, email=p.email, role=p.role, is_admin=p.is_admin, is_breakglass=p.is_breakglass,
+        rep_id=None if p.is_admin else p.rep_id, rep_name=None if p.is_admin else p.rep_name,
     )
 
 

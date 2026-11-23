@@ -38,7 +38,8 @@ function valuesOf(fields: Field[], row?: Record<string, unknown>): Values {
     fields.map((f) => {
       const v = row?.[f.key]
       if (f.type === 'checkbox') return [f.key, row ? Boolean(v) : true]
-      if (f.type === 'select') return [f.key, (v as string) ?? f.options?.[0]?.value ?? '']
+      // Ids come back as numbers; options are strings.
+      if (f.type === 'select') return [f.key, v != null ? String(v) : (f.options?.[0]?.value ?? '')]
       if (f.type === 'color') return [f.key, (v as string) ?? '#22c55e']
       return [f.key, (v as string | null) ?? '']
     }),

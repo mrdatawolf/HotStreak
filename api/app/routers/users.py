@@ -26,6 +26,24 @@ def other_active_admins(db: Session, user_id: int) -> int:
     )
 
 
+NEEDS_REP = "Pick the rep this user's reports are for"
+
+
+def check_rep(db: Session, role: str, rep_id: int | None, changed: bool, active: bool = True) -> None:
+    """Active users must be linked to a rep (admins may be). A newly picked rep must exist and be active.
+
+    An inactive user may stay unlinked, so an old account can be switched off without picking a rep.
+    """
+    if role == "user" and rep_id is None and active:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, NEEDS_REP)
+    if rep_id is not None and changed:
+        rep = db.get(models.Rep, rep_id)
+        if not rep:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Unknown rep")
+        if not rep.active:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, f"{rep.name} is inactive; pick an active rep")
+
+
 def commit_or_conflict(db: Session) -> None:
     try:
         db.commit()
@@ -41,7 +59,9 @@ def list_users(db: Session = Depends(get_session)):
 
 @router.post("", response_model=schemas.UserOut, status_code=status.HTTP_201_CREATED)
 def create_user(body: schemas.UserCreate, db: Session = Depends(get_session)):
-    user = models.User(name=body.name, email=body.email, role=body.role, password_hash=auth.hash_password(body.password))
+    check_rep(db, body.role, body.rep_id, changed=True)
+    user = models.User(name=body.name, email=body.email, role=body.role, rep_id=body.rep_id,
+                       password_hash=auth.hash_password(body.password))
     db.add(user)
     commit_or_conflict(db)
     return user
@@ -56,6 +76,9 @@ def update_user(user_id: int, body: schemas.UserUpdate, db: Session = Depends(ge
     )
     if losing_admin and not other_active_admins(db, user.id):
         raise HTTPException(status.HTTP_409_CONFLICT, "Can't remove the last active admin")
+    check_rep(db, changes.get("role", user.role), changes.get("rep_id", user.rep_id),
+              changed="rep_id" in changes and changes["rep_id"] != user.rep_id,
+              active=changes.get("active", user.active))
     for field, value in changes.items():
         setattr(user, field, value)
     if changes.get("active") is False:

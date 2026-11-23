@@ -28,8 +28,8 @@ def history(session):
     return {"alex": alex, "house": house}
 
 
-def test_trend_figures(user_client, history):
-    t = user_client.get("/api/reports/trends").json()
+def test_trend_figures(admin_client, history):
+    t = admin_client.get("/api/reports/trends").json()
     assert (t["current"], t["last_complete"]) == ({"year": 2026, "month": 3}, {"year": 2026, "month": 2})
 
     months = {(m["year"], m["month"]): m for m in t["months"]}
@@ -55,8 +55,8 @@ def test_trend_figures(user_client, history):
                         "prior_sales_cents": 400_000, "prior_deal_count": 2}
 
 
-def test_forecasts(user_client, history):
-    f = {x["label"]: x for x in user_client.get("/api/reports/trends").json()["forecasts"]}
+def test_forecasts(admin_client, history):
+    f = {x["label"]: x for x in admin_client.get("/api/reports/trends").json()["forecasts"]}
     assert list(f) == ["This quarter (Q1 2026)", "Next quarter (Q2 2026)", "This year (2026)"]
 
     quarter = f["This quarter (Q1 2026)"]
@@ -72,8 +72,8 @@ def test_forecasts(user_client, history):
     assert (year["estimate_cents"], year["last_year_cents"], year["quota_cents"]) == (2_400_000, 2_400_000, 12_000_000)
 
 
-def test_growth(user_client, history):
-    t = user_client.get("/api/reports/trends").json()
+def test_growth(admin_client, history):
+    t = admin_client.get("/api/reports/trends").json()
     reps = {r["label"]: r for r in t["rep_growth"]}
     # Mar 2025–Feb 2026 vs Mar 2024–Feb 2025.
     assert (reps["ALEX"]["sales_cents"], reps["ALEX"]["prior_sales_cents"]) == (2_400_000, 1_400_000)
@@ -82,26 +82,26 @@ def test_growth(user_client, history):
     assert [b["label"] for b in t["brand_growth"]] == ["Sharp"]  # HOUSE's lineless deal isn't team sales
 
 
-def test_filters(user_client, history):
-    t = user_client.get("/api/reports/trends", params={"rep_id": history["house"].id}).json()
+def test_filters(admin_client, history):
+    t = admin_client.get("/api/reports/trends", params={"rep_id": history["house"].id}).json()
     assert t["averages"]["monthly_12_cents"] == round(999_900 / 12)
     assert [r["label"] for r in t["rep_growth"]] == ["HOUSE"]
 
-    t = user_client.get("/api/reports/trends", params={"brand": "Lexmark"}).json()
+    t = admin_client.get("/api/reports/trends", params={"brand": "Lexmark"}).json()
     assert t["filtered"] is True and t["averages"]["monthly_12_cents"] == 0
     assert all(f["quota_cents"] is None and f["low_cents"] is None for f in t["forecasts"])
 
 
-def test_short_history(user_client, session):
+def test_short_history(admin_client, session):
     for m in (1, 2):
         session.add(models.Period(year=2026, month=m, locked_at=datetime(2026, m, 28) if m == 1 else None))
     session.commit()
-    t = user_client.get("/api/reports/trends").json()
+    t = admin_client.get("/api/reports/trends").json()
     assert t["forecasts"] == [] and t["rep_growth"] == [] and t["averages"]["monthly_12_cents"] is None
 
 
-def test_trends_errors(client, user_client, session):
-    assert user_client.get("/api/reports/trends").status_code == 404  # no months yet
-    assert user_client.get("/api/reports/trends", params={"rep_id": 999}).status_code in (404, 422)
+def test_trends_errors(client, admin_client, session):
+    assert admin_client.get("/api/reports/trends").status_code == 404  # no months yet
+    assert admin_client.get("/api/reports/trends", params={"rep_id": 999}).status_code in (404, 422)
     client.headers.pop("Authorization")
     assert client.get("/api/reports/trends").status_code == 401

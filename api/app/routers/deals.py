@@ -1,4 +1,4 @@
-"""Deal entry. Signed-in users can view deals; only admins add, edit, or delete them (in an unlocked month)."""
+"""Deal entry. Only admins add, edit, or delete deals (in an unlocked month); users view their own rep's deals."""
 
 import calendar
 
@@ -136,7 +136,13 @@ def apply(db: Session, deal: models.Deal, body: schemas.DealIn, principal: auth.
 
 
 @router.get("", response_model=list[schemas.DealOut])
-def list_deals(period_id: int | None = None, rep_id: int | None = None, db: Session = Depends(get_session)):
+def list_deals(
+    period_id: int | None = None,
+    rep_id: int | None = None,
+    principal: auth.Principal = Depends(auth.require_user),
+    db: Session = Depends(get_session),
+):
+    rep_id = auth.scoped_rep_id(principal, rep_id)
     query = select(models.Deal).options(*LOAD_OPTIONS).order_by(
         models.Deal.deal_date.desc().nulls_last(), models.Deal.id.desc()
     )
@@ -148,8 +154,12 @@ def list_deals(period_id: int | None = None, rep_id: int | None = None, db: Sess
 
 
 @router.get("/{deal_id}", response_model=schemas.DealOut)
-def get_deal(deal_id: int, db: Session = Depends(get_session)):
-    return deal_out(load_deal(db, deal_id))
+def get_deal(deal_id: int, principal: auth.Principal = Depends(auth.require_user), db: Session = Depends(get_session)):
+    deal = load_deal(db, deal_id)
+    rep_id = auth.scoped_rep_id(principal, deal.rep_id)
+    if rep_id != deal.rep_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Deal not found")
+    return deal_out(deal)
 
 
 @router.post("", response_model=schemas.DealOut, status_code=status.HTTP_201_CREATED)

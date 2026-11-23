@@ -269,7 +269,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Report */
+        /**
+         * Report
+         * @description Admins see the team or any rep; users always get their own rep, whatever rep_id says.
+         */
         get: operations["report_api_reports_get"];
         put?: never;
         post?: never;
@@ -288,7 +291,7 @@ export interface paths {
         };
         /**
          * Trends
-         * @description Whole-history trends and quarter/year forecasts, up to the current month.
+         * @description Whole-history trends and quarter/year forecasts, up to the current month. Users get their own rep only.
          */
         get: operations["trends_api_reports_trends_get"];
         put?: never;
@@ -1006,6 +1009,10 @@ export interface components {
             is_admin: boolean;
             /** Is Breakglass */
             is_breakglass: boolean;
+            /** Rep Id */
+            rep_id: number | null;
+            /** Rep Name */
+            rep_name: string | null;
         };
         /** MonthKey */
         MonthKey: {
@@ -1354,6 +1361,8 @@ export interface components {
             role: "admin" | "user";
             /** Password */
             password: string;
+            /** Rep Id */
+            rep_id?: number | null;
         };
         /** UserOut */
         UserOut: {
@@ -1377,6 +1386,10 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Rep Id */
+            rep_id: number | null;
+            /** Rep Name */
+            rep_name: string | null;
         };
         /** UserUpdate */
         UserUpdate: {
@@ -1388,6 +1401,8 @@ export interface components {
             role?: ("admin" | "user") | null;
             /** Active */
             active?: boolean | null;
+            /** Rep Id */
+            rep_id?: number | null;
         };
         /** ValidationError */
         ValidationError: {

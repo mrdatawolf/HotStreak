@@ -5,11 +5,15 @@ from app import models
 from .conftest import PASSWORD, make_user, sign_in
 
 
-def test_create_user_and_duplicate_email(admin_client):
-    body = {"name": "Pat", "email": "Pat@Example.com", "role": "user", "password": "long enough pw"}
+def test_create_user_and_duplicate_email(admin_client, session):
+    rep = models.Rep(name="JON")
+    session.add(rep)
+    session.commit()
+    body = {"name": "Pat", "email": "Pat@Example.com", "role": "user", "password": "long enough pw", "rep_id": rep.id}
     res = admin_client.post("/api/users", json=body)
     assert res.status_code == 201
     assert res.json()["email"] == "pat@example.com"
+    assert (res.json()["rep_id"], res.json()["rep_name"]) == (rep.id, "JON")
     assert "password_hash" not in res.json()
     assert admin_client.post("/api/users", json=body).status_code == 409
 
@@ -28,7 +32,12 @@ def test_cannot_remove_last_admin(admin_client, session):
     assert admin_client.delete(f"/api/users/{admin.id}").status_code == 409
 
     make_user(session, "second@example.com", role="admin")
-    assert admin_client.patch(f"/api/users/{admin.id}", json={"role": "user"}).status_code == 200
+    # Becoming a user means picking a rep.
+    assert admin_client.patch(f"/api/users/{admin.id}", json={"role": "user"}).status_code == 422
+    rep = models.Rep(name="JON")
+    session.add(rep)
+    session.commit()
+    assert admin_client.patch(f"/api/users/{admin.id}", json={"role": "user", "rep_id": rep.id}).status_code == 200
 
 
 def test_deactivate_signs_user_out(admin_client, client, session):
@@ -137,3 +146,42 @@ def test_settings(admin_client):
     assert s == {"quota_unit": "usd_thousands"}
     assert admin_client.patch("/api/settings", json={"quota_unit": "units"}).json()["quota_unit"] == "units"
     assert admin_client.patch("/api/settings", json={"quota_unit": "bananas"}).status_code == 422
+
+
+def test_users_must_be_linked_to_a_rep(admin_client, session):
+    jon, old = models.Rep(name="JON"), models.Rep(name="OLD", active=False)
+    session.add_all([jon, old])
+    session.commit()
+    body = {"name": "Pat", "email": "pat@example.com", "role": "user", "password": "long enough pw"}
+
+    res = admin_client.post("/api/users", json=body)
+    assert res.status_code == 422 and "rep" in res.json()["detail"]
+    assert admin_client.post("/api/users", json=body | {"rep_id": 999}).json()["detail"] == "Unknown rep"
+    assert "inactive" in admin_client.post("/api/users", json=body | {"rep_id": old.id}).json()["detail"]
+    # Admins don't need one.
+    assert admin_client.post("/api/users", json=body | {"email": "a2@example.com", "role": "admin"}).status_code == 201
+
+    user = admin_client.post("/api/users", json=body | {"rep_id": jon.id}).json()
+    # Two users can share a rep.
+    assert admin_client.post("/api/users", json=body | {"email": "pa@example.com", "rep_id": jon.id}).status_code == 201
+    # A user's rep can't be cleared.
+    assert admin_client.patch(f"/api/users/{user['id']}", json={"rep_id": None}).status_code == 422
+    # Keeping a rep that has since gone inactive is fine; only newly picked reps must be active.
+    jon.active = False
+    session.commit()
+    assert admin_client.patch(f"/api/users/{user['id']}", json={"name": "Patrick"}).status_code == 200
+
+
+def test_unlinked_user_can_still_be_deactivated(admin_client, session):
+    user = make_user(session, "old@example.com")  # e.g. created before reps were linked
+    assert admin_client.patch(f"/api/users/{user.id}", json={"name": "Old"}).status_code == 422
+    assert admin_client.patch(f"/api/users/{user.id}", json={"active": False}).status_code == 200
+
+
+def test_rep_with_users_cant_be_deleted(admin_client, session):
+    rep = models.Rep(name="JON")
+    session.add(rep)
+    session.commit()
+    make_user(session, "pat@example.com", rep=rep)
+    res = admin_client.delete(f"/api/reps/{rep.id}")
+    assert res.status_code == 409 and "linked" in res.json()["detail"]

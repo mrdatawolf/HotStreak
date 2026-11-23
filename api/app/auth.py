@@ -74,6 +74,9 @@ class Principal:
     email: str | None = None
     is_breakglass: bool = False
     session_id: int | None = None
+    # The rep whose sales a "user" sees in reports and on the Deals page.
+    rep_id: int | None = None
+    rep_name: str | None = None
 
     @property
     def is_admin(self) -> bool:
@@ -151,7 +154,8 @@ def login(db: Session, username: str, password: str) -> tuple[str, Principal]:
 
 
 def user_principal(user: models.User, session_id: int | None = None) -> Principal:
-    return Principal(name=user.name, role=user.role, user_id=user.id, email=user.email, session_id=session_id)
+    return Principal(name=user.name, role=user.role, user_id=user.id, email=user.email, session_id=session_id,
+                     rep_id=user.rep_id, rep_name=user.rep_name)
 
 
 def get_principal(
@@ -184,3 +188,15 @@ def require_admin(principal: Principal = Depends(require_user)) -> Principal:
     if not principal.is_admin:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Admins only")
     return principal
+
+
+NO_REP = "Your account isn't linked to a rep yet. Ask an admin to link it on Admin → Users."
+
+
+def scoped_rep_id(principal: Principal, requested: int | None) -> int | None:
+    """The rep a caller may look at: admins pick any (or none, for the team); users only ever get their own."""
+    if principal.is_admin:
+        return requested
+    if principal.rep_id is None:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, NO_REP)
+    return principal.rep_id

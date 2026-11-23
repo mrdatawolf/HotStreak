@@ -40,6 +40,8 @@ def delete_rep(rep_id: int, db: Session = Depends(get_session)):
     rep = get_or_404(db, models.Rep, rep_id, "Rep")
     if db.scalar(select(func.count()).select_from(models.Deal).where(models.Deal.rep_id == rep.id)):
         raise HTTPException(status.HTTP_409_CONFLICT, "This rep has deals; mark them inactive instead")
+    if db.scalar(select(func.count()).select_from(models.User).where(models.User.rep_id == rep.id)):
+        raise HTTPException(status.HTTP_409_CONFLICT, "Users are linked to this rep; link them to another rep first")
     db.execute(delete(models.PeriodRep).where(models.PeriodRep.rep_id == rep.id))
     db.delete(rep)
     db.commit()
