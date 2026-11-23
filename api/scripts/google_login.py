@@ -1,4 +1,4 @@
-"""Sign in with a Google account that can view the sheet, and save a token the API syncs with.
+"""Sign in with a Google account that can edit the sheet, and save a token the API syncs (and writes deals) with.
 
 A stopgap until there's a service account. Setup (once), in Google Cloud:
   1. Enable the Google Sheets API.
@@ -10,7 +10,8 @@ Usage (from api/):
     python -m scripts.google_login [--client-secret PATH] [--out PATH]
 
 Opens a browser to sign in, saves the token (default api/secrets/google-user-token.json), and prints
-the TRACKER_GOOGLE_CREDENTIALS line for .env. While the consent screen is in Testing, Google expires
+the TRACKER_GOOGLE_CREDENTIALS line for .env. Approve the "see, edit, create, and delete your spreadsheets"
+access: the app writes deals entered in it to the sheet. While the consent screen is in Testing, Google expires
 the token after about 7 days; run this again when Admin → Sheet says the sign-in expired.
 """
 

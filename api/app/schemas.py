@@ -525,6 +525,9 @@ class SheetSyncStatus(BaseModel):
     # The email to share the sheet with.
     service_account: str | None
     interval_minutes: int
+    # Can the app write deals to the sheet? "read_only": the Google sign-in predates writing; run
+    # scripts.google_login again. "unknown": a service account, which needs the sheet shared as Editor.
+    write_access: Literal["ready", "read_only", "unknown"]
     last: SyncRun | None
 
 

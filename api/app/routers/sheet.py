@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from .. import auth, models, name_fixes, schemas, sheet_sync
 from ..config import settings
 from ..db import get_session
-from ..google_sheet import SheetError, service_account_email, spreadsheet_id
+from ..google_sheet import SheetError, service_account_email, spreadsheet_id, write_access
 from ..names import name_key
 from .common import get_or_404
 
@@ -24,6 +24,7 @@ def status_out(db: Session) -> schemas.SheetSyncStatus:
         sheet_url=url,
         service_account=service_account_email(creds) if creds else None,
         interval_minutes=settings.google_sync_minutes,
+        write_access=write_access(creds),
         last=sheet_sync.get_status(db),
     )
 

@@ -142,3 +142,38 @@ def test_load_credentials_user_token(tmp_path):
     token = tmp_path / "token.json"
     token.write_text('{"type": "authorized_user", "client_id": "c", "client_secret": "s", "refresh_token": "r"}')
     assert isinstance(load_credentials(token), Credentials)
+
+
+def test_write_access(tmp_path):
+    import json
+
+    from app.google_sheet import READ_SCOPE, WRITE_SCOPE, load_credentials, write_access
+
+    base = {"type": "authorized_user", "client_id": "c", "client_secret": "s", "refresh_token": "r"}
+    old = tmp_path / "old.json"
+    old.write_text(json.dumps(base | {"scopes": [READ_SCOPE]}))
+    new = tmp_path / "new.json"
+    new.write_text(json.dumps(base | {"scopes": [WRITE_SCOPE]}))
+    sa = tmp_path / "sa.json"
+    sa.write_text(json.dumps({"type": "service_account", "client_email": "x@y.iam.gserviceaccount.com"}))
+
+    assert write_access(old) == "read_only"
+    assert write_access(new) == "ready"
+    assert write_access(sa) == "unknown"  # depends on the sheet being shared as Editor
+    assert write_access(None) == write_access(tmp_path / "missing.json") == "unknown"
+    # A read-only sign-in keeps the scopes it was granted, so its refresh (and syncing) still works.
+    assert load_credentials(old).scopes == [READ_SCOPE]
+
+
+def test_sheet_status_reports_write_access(admin_client, tmp_path, monkeypatch):
+    import json
+
+    from app.config import settings
+    from app.google_sheet import READ_SCOPE
+
+    token = tmp_path / "token.json"
+    token.write_text(json.dumps({"type": "authorized_user", "client_id": "c", "client_secret": "s",
+                                 "refresh_token": "r", "scopes": [READ_SCOPE]}))
+    monkeypatch.setattr(settings, "google_sheet", SHEET_ID)
+    monkeypatch.setattr(settings, "google_credentials", str(token))
+    assert admin_client.get("/api/sheet/sync").json()["write_access"] == "read_only"

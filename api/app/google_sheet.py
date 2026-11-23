@@ -1,7 +1,7 @@
 """Read the client's Google Sheet through the Sheets API with a service account or a signed-in user.
 
 Setup: create a service account in Google Cloud with the Sheets API enabled, download its JSON key,
-share the sheet with the account's email as Viewer, and set TRACKER_GOOGLE_SHEET and
+share the sheet with the account's email as Editor, and set TRACKER_GOOGLE_SHEET and
 TRACKER_GOOGLE_CREDENTIALS in .env. Until there's a service account, TRACKER_GOOGLE_CREDENTIALS can
 instead point at a user token saved by `python -m scripts.google_login` (see that script).
 
@@ -16,7 +16,10 @@ from pathlib import Path
 from .sheet_import import Cell, Grid, parse_tab_name
 
 API = "https://sheets.googleapis.com/v4/spreadsheets"
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
+READ_SCOPE = "https://www.googleapis.com/auth/spreadsheets.readonly"
+WRITE_SCOPE = "https://www.googleapis.com/auth/spreadsheets"
+# Asked for by scripts.google_login and service accounts: deals entered in the app are written to the sheet.
+SCOPES = [WRITE_SCOPE]
 # Month tabs are about 40 rows by 33 columns; leave plenty of room.
 TAB_RANGE = "A1:AZ300"
 
@@ -51,6 +54,27 @@ def is_user_token(credentials: Path) -> bool:
     return info.get("type") == "authorized_user" or ("refresh_token" in info and "client_email" not in info)
 
 
+def token_scopes(credentials: Path) -> list[str]:
+    try:
+        scopes = json.loads(credentials.read_text(encoding="utf-8")).get("scopes") or []
+    except (OSError, ValueError):
+        return []
+    return scopes.split() if isinstance(scopes, str) else list(scopes)
+
+
+def write_access(credentials: Path | None) -> str:
+    """'ready', 'read_only' (a sign-in saved before writing existed), or 'unknown'.
+
+    A service account always asks for write access; whether it has it depends on being shared the sheet
+    as Editor, which only shows when a write is tried.
+    """
+    if not credentials or not credentials.is_file():
+        return "unknown"
+    if is_user_token(credentials):
+        return "ready" if WRITE_SCOPE in token_scopes(credentials) else "read_only"
+    return "unknown"
+
+
 def load_credentials(credentials: Path):
     """Service-account key or saved user token, whichever the file is."""
     if not credentials.is_file():
@@ -68,7 +92,9 @@ def load_credentials(credentials: Path):
         if is_user_token(credentials):
             from google.oauth2.credentials import Credentials
 
-            return Credentials.from_authorized_user_file(str(credentials), scopes=SCOPES)
+            # Use the scopes the token was granted: asking a read-only token for write access fails its refresh,
+            # which would stop syncing too. token_scopes() tells whether it can write.
+            return Credentials.from_authorized_user_file(str(credentials))
         from google.oauth2 import service_account
 
         return service_account.Credentials.from_service_account_file(str(credentials), scopes=SCOPES)
@@ -117,11 +143,11 @@ def read_spreadsheet(sheet: str, credentials: Path, session=None) -> dict[str, G
                 raise SheetError("Google sign-in expired; run `python -m scripts.google_login` in api/") from None
             raise SheetError(f"Couldn't reach Google Sheets: {e}") from None
         if res.status_code == 403 and is_user_token(credentials):
-            raise SheetError("The signed-in Google account can't open the sheet; share the sheet with it as Viewer")
+            raise SheetError("The signed-in Google account can't open the sheet; share the sheet with it as Editor")
         if res.status_code == 403:
             email = service_account_email(credentials)
             who = f" ({email})" if email else ""
-            raise SheetError(f"The service account{who} can't open the sheet; share the sheet with it as Viewer")
+            raise SheetError(f"The service account{who} can't open the sheet; share the sheet with it as Editor")
         if res.status_code == 404:
             raise SheetError("Sheet not found; check TRACKER_GOOGLE_SHEET")
         if res.status_code != 200:

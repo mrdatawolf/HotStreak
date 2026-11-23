@@ -1277,6 +1277,11 @@ export interface components {
             service_account: string | null;
             /** Interval Minutes */
             interval_minutes: number;
+            /**
+             * Write Access
+             * @enum {string}
+             */
+            write_access: "ready" | "read_only" | "unknown";
             last: components["schemas"]["SyncRun"] | null;
         };
         /** SyncCounts */

@@ -38,7 +38,8 @@ export default function SheetPage() {
               service account. Under its <em>Keys</em> tab, add a JSON key and download it.</li>
             <li>Save the key on the server (for example <code>api/secrets/google-service-account.json</code> — keep it
               out of git) and set <code>TRACKER_GOOGLE_CREDENTIALS</code> in <code>.env</code> to its path.</li>
-            <li>Share the sheet with the service account's email address as <strong>Viewer</strong>
+            <li>Share the sheet with the service account's email address as <strong>Editor</strong> (deals entered
+              in the app are written to the sheet)
               {data.service_account ? <> — <code>{data.service_account}</code></> : null}.</li>
             <li>Check <code>TRACKER_GOOGLE_SHEET</code> in <code>.env</code> is the sheet's URL, then restart the API.</li>
           </ol>
@@ -48,6 +49,16 @@ export default function SheetPage() {
       <div className="panel settings-block">
         <h2>Last sync</h2>
         {data?.sheet_url && <p><a href={data.sheet_url} target="_blank" rel="noreferrer">Open the sheet</a></p>}
+        {data?.configured && data.write_access === 'read_only' && (
+          <p className="banner warn" role="status">
+            The Google sign-in can only <strong>read</strong> the sheet, so deals can't be written to it yet. In{' '}
+            <code>api/</code>, run <code>python -m scripts.google_login</code> again, approve access to edit your
+            spreadsheets, then restart the API. Syncing keeps working until then.
+          </p>
+        )}
+        {data?.configured && data.write_access === 'ready' && (
+          <p className="muted">The Google sign-in can write to the sheet.</p>
+        )}
         {!last && <p className="muted">Not synced yet.</p>}
         {last && (last.ok ? (
           <p className="form-ok" role="status">

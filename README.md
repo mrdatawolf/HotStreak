@@ -190,14 +190,19 @@ The client keeps entering deals on their Google Sheet; the API copies it into th
 `TRACKER_GOOGLE_SYNC_MINUTES` (default 5), and **Admin → Sheet** shows the last sync and has *Sync now*.
 
 **Setup** (once): in Google Cloud, enable the Google Sheets API, create a service account, and download a JSON key
-to `api/secrets/` (not committed). Share the sheet with the service account's email as **Viewer**. In `.env` set
-`TRACKER_GOOGLE_SHEET` (the sheet's URL) and `TRACKER_GOOGLE_CREDENTIALS` (the key's path), then restart the API.
+to `api/secrets/` (not committed). Share the sheet with the service account's email as **Editor** (the app writes
+deals to it). In `.env` set `TRACKER_GOOGLE_SHEET` (the sheet's URL) and `TRACKER_GOOGLE_CREDENTIALS` (the key's path), then restart the API.
 
-**Stopgap without a service account:** sign in as a Google account that can view the sheet. Create an OAuth client
+**Stopgap without a service account:** sign in as a Google account that can edit the sheet. Create an OAuth client
 ID (Desktop app) in Google Cloud, save its JSON as `api/secrets/google-oauth-client.json`, run
 `.venv/bin/python -m scripts.google_login` from `api/`, and set `TRACKER_GOOGLE_CREDENTIALS` to the token it saves.
+On Linux/macOS, `./renew_api.sh` does the sign-in with checks around it: it confirms the setup, backs up the old
+sign-in, opens the browser, then tests that the new one can read the sheet and has edit access.
+`./renew_api.sh --check` only reports whether the current sign-in can read and write.
 While the OAuth consent screen is in Testing, the sign-in lasts about 7 days; run the script again when
-**Admin → Sheet** says it expired. Full steps are in `api/scripts/google_login.py`.
+**Admin → Sheet** says it expired. Full steps are in `api/scripts/google_login.py`. The script asks for access to
+edit spreadsheets; a sign-in saved before that is read-only, which **Admin → Sheet** points out (syncing still
+works) — run the script again to allow writing.
 
 **What a sync does** (safe to repeat):
 - Every month tab (named like `0124`, `926`, `11/26` or `03/24`) is a month; other tabs (summaries, templates)

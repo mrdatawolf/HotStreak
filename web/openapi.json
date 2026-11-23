@@ -5100,6 +5100,15 @@
             "type": "integer",
             "title": "Interval Minutes"
           },
+          "write_access": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "read_only",
+              "unknown"
+            ],
+            "title": "Write Access"
+          },
           "last": {
             "anyOf": [
               {
@@ -5117,6 +5126,7 @@
           "sheet_url",
           "service_account",
           "interval_minutes",
+          "write_access",
           "last"
         ],
         "title": "SheetSyncStatus"
