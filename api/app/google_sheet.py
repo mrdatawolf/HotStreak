@@ -127,38 +127,59 @@ def quote(title: str) -> str:
     return "'" + title.replace("'", "''") + "'"
 
 
-def read_spreadsheet(sheet: str, credentials: Path, session=None) -> dict[str, Grid]:
-    """Fetch every month tab. `session` is an authorized requests-style session (for tests)."""
-    sheet_id = spreadsheet_id(sheet)
-    if session is None:
-        from google.auth.transport.requests import AuthorizedSession
+class SheetsApi:
+    """Calls to one spreadsheet, with Google's errors turned into SheetError messages an admin can act on.
 
-        session = AuthorizedSession(load_credentials(credentials))
+    `session` is an authorized requests-style session (tests pass a fake).
+    """
 
-    def get(params: dict) -> dict:
+    def __init__(self, sheet: str, credentials: Path, session=None):
+        self.sheet_id = spreadsheet_id(sheet)
+        self.credentials = credentials
+        if session is None:
+            from google.auth.transport.requests import AuthorizedSession
+
+            session = AuthorizedSession(load_credentials(credentials))
+        self.session = session
+
+    def get(self, params: dict, path: str = "") -> dict:
+        return self._call("get", path, params=params)
+
+    def post(self, path: str, body: dict) -> dict:
+        return self._call("post", path, json=body)
+
+    def _call(self, method: str, path: str, **kwargs) -> dict:
+        credentials = self.credentials
         try:
-            res = session.get(f"{API}/{sheet_id}", params=params, timeout=60)
+            res = getattr(self.session, method)(f"{API}/{self.sheet_id}{path}", timeout=60, **kwargs)
         except Exception as e:  # network errors, token refresh failures
             if is_user_token(credentials) and "invalid_grant" in str(e):
-                raise SheetError("Google sign-in expired; run `python -m scripts.google_login` in api/") from None
+                raise SheetError("Google sign-in expired; run ./renew_api.sh (or `python -m scripts.google_login` in api/)") from None
             raise SheetError(f"Couldn't reach Google Sheets: {e}") from None
+        if res.status_code == 403 and method != "get" and is_user_token(credentials):
+            raise SheetError("The signed-in Google account can't edit the sheet: share it as Editor, and make sure the "
+                             "sign-in allows editing (./renew_api.sh --check)")
         if res.status_code == 403 and is_user_token(credentials):
             raise SheetError("The signed-in Google account can't open the sheet; share the sheet with it as Editor")
         if res.status_code == 403:
             email = service_account_email(credentials)
             who = f" ({email})" if email else ""
-            raise SheetError(f"The service account{who} can't open the sheet; share the sheet with it as Editor")
+            raise SheetError(f"The service account{who} can't open or edit the sheet; share the sheet with it as Editor")
         if res.status_code == 404:
             raise SheetError("Sheet not found; check TRACKER_GOOGLE_SHEET")
         if res.status_code != 200:
-            raise SheetError(f"Google Sheets returned {res.status_code}: {res.text[:200]}")
+            raise SheetError(f"Google Sheets returned {res.status_code}: {res.text[:300]}")
         return res.json()
 
-    titles = [s["properties"]["title"] for s in get({"fields": "sheets.properties.title"}).get("sheets", [])]
+
+def read_spreadsheet(sheet: str, credentials: Path, session=None) -> dict[str, Grid]:
+    """Fetch every month tab. `session` is an authorized requests-style session (for tests)."""
+    api = SheetsApi(sheet, credentials, session)
+    titles = [s["properties"]["title"] for s in api.get({"fields": "sheets.properties.title"}).get("sheets", [])]
     months = [t for t in titles if parse_tab_name(t)]
     if not months:
         return {}
-    data = get({
+    data = api.get({
         "ranges": [f"{quote(t)}!{TAB_RANGE}" for t in months],
         "includeGridData": "true",
         "fields": "sheets(properties.title,data.rowData.values(effectiveValue,userEnteredFormat(backgroundColor,backgroundColorStyle)))",

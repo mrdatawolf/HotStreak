@@ -164,6 +164,9 @@ class Deal(Base):
     sheet_client: Mapped[str | None] = mapped_column(String(200))
     # The client was marked "+" on the sheet that month (a notation; meaning kept by the client).
     sheet_plus: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    # Fingerprint of the deal's Deals-tab row as last synced. The app only rewrites or deletes the row
+    # while it still matches, so a change made on the sheet in the meantime isn't overwritten.
+    sheet_version: Mapped[str | None] = mapped_column(String(16))
     created_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     updated_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

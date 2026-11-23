@@ -223,6 +223,63 @@ works) — run the script again to allow writing.
   Rules: `api/app/item_parse.py`.
 - A deal listed under two reps (a split) is counted for both, as on the sheet. HOUSE counts toward the total.
 
+**Data tabs (replacing the month tabs):** the sheet is moving to one row per record — **Deals**
+(ID, month, date, rep, client, location, new customer, plus, items, amount, notes, entered by, updated),
+**Quotas** (month, rep, quota, board order) and **Reps** — with view tabs built from them by formula. Both
+people and the app edit Deals rows; the ID column is filled in by the app. To create and fill the data tabs from the
+synced history (try it on a copy of the sheet first; the month tabs aren't touched):
+
+```bash
+.venv/bin/python -m scripts.setup_sheet_tabs --dry-run   # sync, compare each month with its tab's MONTHLY TOTAL
+.venv/bin/python -m scripts.setup_sheet_tabs             # asks for the sheet's title, writes, reads back to check
+```
+
+`--replace` rebuilds data tabs that already exist (anything typed into them since is lost). Code:
+`api/app/sheet_tabs.py`.
+
+The same command then builds two **view tabs** from formulas (`--views` rebuilds just these, and checks them):
+- **Board** — the month-tab layout for one month, picked in **B1** (blank = the current month; the choice is shared
+  by everyone with the sheet open). Up to 15 reps, in the Quotas order; each rep's block shows 12 deals (clients with
+  `*`/`+` and green/orange, items, amounts), "+N more" under the name when there are more, QUOTA (`~` = none) and
+  SALES (all their deals). MONTHLY TOTAL counts reps ticked *Counts toward total*. Replaces the per-month tabs,
+  "Monthly Template" and "Billboard Mirror".
+- **Overview** — Year · Month · Sales · Year total for every month, growing by itself. An Overview tab that wasn't
+  built by this command is renamed "Overview (old)" and kept.
+
+Both are locked (except the Board's B1); edit the data tabs instead. After building, the command shows several
+months on the Board and compares every rep, their order, sales and the total with the app, and every Overview month.
+Code: `api/app/sheet_views.py`.
+
+Once the sheet has a **Deals** tab, the sync reads the data tabs instead of the month tabs (Admin → Sheet says
+which). Columns are found by their header, so they can be moved. On each sync:
+- New Deals rows get the next ID (`D01118`…) written into their ID cell; a pasted copy of another row's ID gets a
+  new one. A row is only written if it still holds what was read, so sorting mid-sync can't misplace an ID.
+- Rows that can't be used are listed under *things to check* by row number: a month not like `2026-11` or no rep
+  (skipped); an amount that isn't a number (counted as $0); a rep not on the Reps tab (added); a date outside its
+  month (kept). A `*` or `+` typed after a client still works as the New customer / Plus tick.
+- Each month's reps and quotas come from Quotas, in its Order; a rep with deals but no Quotas row is added at the
+  bottom with no quota. Active and Counts toward total come from the Reps tab.
+- Date, location, notes and *Entered by* (matched to a user by name) are kept on the deal.
+- Deals are matched to the app's by ID and updated in place (so links to a deal keep working); a row deleted on the
+  sheet is deleted in the app. Each deal remembers a fingerprint of its row (its *version*).
+
+**The app writes to the data tabs.** Once the sheet has them, an admin's change in the app goes to the sheet first,
+then a sync brings it back, so the app always shows what the sheet holds (a save takes a second or two):
+- **Deals** — *Add deal* adds a row below the last one with the next ID and *Entered by*; editing rewrites that
+  row's cells (other columns are left alone); deleting removes the row. Any month can be changed, locked or not.
+  The sheet keeps the deal total, not per-line amounts, and only the New customer flag (other flags are refused);
+  the form's “+” marker is the Plus tick. A row changed on the sheet since the last sync isn't overwritten: the
+  save is refused, the app syncs, and the admin reloads to see the change. Deals entered in the app before the
+  switch move to the sheet as new rows when they're next saved.
+- **Quotas** (Admin → Quotas) rewrite that month's Quotas rows in board order; *Start <month>* adds the new month's
+  rows. A rep with deals that month stays on its board (at the bottom, without a quota) even if removed.
+- **Reps** — adding adds a Reps row (names in capitals, as the sheet keeps them); renaming also renames the rep on
+  every Deals and Quotas row, and users stay linked; deleting removes the Reps and Quotas rows.
+- *Lock*/*Unlock* on Admin → Months is hidden: the sync decides which month is current (the newest that isn't in
+  the future) and shows the others as locked.
+Writes and syncs take turns (one lock), and rows are always found by ID, month or name, never by row number, so
+people can sort, insert and delete rows. Code: `api/app/sheet_write.py`.
+
 **Name fixes** (Admin → Client names, Admin → Item names): spellings that differ only by case, spaces or
 punctuation are grouped automatically ("BRAMBLE CREEK" = "Bramble Creek", "XM-3250" = "XM3250"). Likely matches are
 suggested — for clients, close spellings ("Copper Canyon Crediit Union"); for items, only the same model under

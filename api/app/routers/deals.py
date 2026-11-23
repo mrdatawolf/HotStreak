@@ -1,4 +1,9 @@
-"""Deal entry. Only admins add, edit, or delete deals (in an unlocked month); users view their own rep's deals."""
+"""Deal entry. Only admins add, edit, or delete deals; users view their own rep's deals.
+
+Once the Google Sheet has the Deals tab (sheet_sync.writes_to_sheet), a save goes to the sheet first and comes
+back by sync, so the sheet stays the source of truth; admins can then change deals in any month. Before that,
+deals entered here live in the app only, in unlocked months, and sheet deals are changed on the sheet.
+"""
 
 import calendar
 
@@ -6,9 +11,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from .. import auth, models, schemas
+from .. import auth, models, schemas, sheet_sync, sheet_write
 from ..board import line_label
 from ..db import get_session
+from ..sheet_import import FLAG_NEW
+from ..sheet_tabs import DEALS_HEADERS, ID_PATTERN, deal_values
 from .common import blank_to_none, get_or_404
 
 router = APIRouter(prefix="/deals", tags=["deals"], dependencies=[Depends(auth.require_user)])
@@ -54,6 +61,7 @@ def deal_out(deal: models.Deal) -> schemas.DealOut:
         updated_by_name=deal.updated_by.name if deal.updated_by else None,
         created_at=deal.created_at,
         updated_at=deal.updated_at,
+        version=deal.sheet_version,
     )
 
 
@@ -72,7 +80,7 @@ def unlocked_period(db: Session, period_id: int) -> models.Period:
 
 
 def not_from_sheet(deal: models.Deal) -> None:
-    # The next sync would overwrite the change.
+    # Without the Deals tab, the next sync would overwrite the change.
     if deal.sheet_ref:
         raise HTTPException(status.HTTP_409_CONFLICT, f"This deal comes from the Google Sheet ({deal.sheet_ref}); change it there")
 
@@ -81,10 +89,11 @@ def unprocessable(detail: str) -> HTTPException:
     return HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail)
 
 
-def apply(db: Session, deal: models.Deal, body: schemas.DealIn, principal: auth.Principal) -> None:
-    """Validate references and copy the request onto the deal."""
-    period = unlocked_period(db, body.period_id)
-    if not db.get(models.Rep, body.rep_id):
+def apply(db: Session, deal: models.Deal, body: schemas.DealIn, principal: auth.Principal, any_month: bool = False) -> None:
+    """Validate references and copy the request onto the deal. any_month: locked months are allowed too."""
+    period = get_or_404(db, models.Period, body.period_id, "Month") if any_month else unlocked_period(db, body.period_id)
+    rep = db.get(models.Rep, body.rep_id)
+    if not rep:
         raise unprocessable("Unknown rep")
 
     if body.deal_date and (body.deal_date.year, body.deal_date.month) != (period.year, period.month):
@@ -118,10 +127,13 @@ def apply(db: Session, deal: models.Deal, body: schemas.DealIn, principal: auth.
 
     deal.period_id = period.id
     deal.rep_id = body.rep_id
+    if any_month:  # a draft for the sheet (never added to the session) needs the objects to build its row
+        deal.period, deal.rep = period, rep
     deal.client = client
     deal.deal_date = body.deal_date
     deal.total_cents = total
     deal.notes = blank_to_none(body.notes)
+    deal.sheet_plus = body.plus
     deal.flags = flags
     deal.lines = [
         models.DealLine(
@@ -133,6 +145,12 @@ def apply(db: Session, deal: models.Deal, body: schemas.DealIn, principal: auth.
         for line in body.lines
     ]
     deal.updated_by_id = principal.user_id
+
+
+# Declared before /{deal_id}, which would otherwise match "mode".
+@router.get("/mode", response_model=schemas.DealMode)
+def deal_mode(db: Session = Depends(get_session)):
+    return schemas.DealMode(sheet=sheet_sync.writes_to_sheet(db))
 
 
 @router.get("", response_model=list[schemas.DealOut])
@@ -162,15 +180,54 @@ def get_deal(deal_id: int, principal: auth.Principal = Depends(auth.require_user
     return deal_out(deal)
 
 
+def sheet_draft(db: Session, body: schemas.DealIn, principal: auth.Principal) -> dict:
+    """Validate the request and turn it into Deals-tab values (without ID, Entered by and Updated)."""
+    draft = models.Deal()
+    apply(db, draft, body, principal, any_month=True)
+    if other := [f.name for f in draft.flags if f.name != FLAG_NEW[0]]:
+        raise unprocessable(f"The Google Sheet only records the {FLAG_NEW[0]} flag; untick {', '.join(other)}")
+    values = dict(zip(DEALS_HEADERS, deal_values(draft, "", f"{draft.period.year}-{draft.period.month:02d}")))
+    for name in ("ID", "Entered by", "Updated"):
+        del values[name]
+    values["Updated"] = sheet_write.now_serial()
+    return values
+
+
+def synced_deal(db: Session, ref: str, principal: auth.Principal) -> schemas.DealOut:
+    """The deal the sync brought back for this sheet ID, marked as changed by this admin."""
+    deal = db.scalars(select(models.Deal).where(models.Deal.sheet_ref == ref)).first()
+    if deal is None:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY,
+                            f"Saved to the sheet as {ref}, but the sync skipped that row; see Admin → Sheet")
+    deal.updated_by_id = principal.user_id
+    db.commit()
+    db.expire(deal)
+    return deal_out(load_deal(db, deal.id))
+
+
+def on_deals_tab(deal: models.Deal) -> bool:
+    return bool(deal.sheet_ref and ID_PATTERN.match(deal.sheet_ref))
+
+
 @router.post("", response_model=schemas.DealOut, status_code=status.HTTP_201_CREATED)
 def create_deal(
     body: schemas.DealIn, principal: auth.Principal = Depends(auth.require_admin), db: Session = Depends(get_session)
 ):
+    if sheet_sync.writes_to_sheet(db):
+        values = {**sheet_draft(db, body, principal), "Entered by": principal.name}
+        ref = sheet_write.write_then_sync(db, lambda api: sheet_write.add_deal(api, values))
+        return synced_deal(db, ref, principal)
     deal = models.Deal(created_by_id=principal.user_id)
     apply(db, deal, body, principal)
     db.add(deal)
     db.commit()
     return deal_out(load_deal(db, deal.id))
+
+
+def stale(deal: models.Deal, version: str | None) -> None:
+    if version and deal.sheet_version and version != deal.sheet_version:
+        raise HTTPException(status.HTTP_409_CONFLICT,
+                            "This deal was changed on the sheet after you opened it; reload to see the change")
 
 
 @router.put("/{deal_id}", response_model=schemas.DealOut)
@@ -181,6 +238,23 @@ def update_deal(
     db: Session = Depends(get_session),
 ):
     deal = load_deal(db, deal_id)
+    if sheet_sync.writes_to_sheet(db):
+        stale(deal, body.version)
+        values = sheet_draft(db, body, principal)
+        if on_deals_tab(deal):
+            ref, version = deal.sheet_ref, deal.sheet_version
+            sheet_write.write_then_sync(db, lambda api: sheet_write.update_deal(api, ref, version, values))
+        else:
+            # Entered in the app before the sheet took over: it moves to the sheet as a new row.
+            values["Entered by"] = deal.created_by.name if deal.created_by else principal.name
+            local_id = deal.id
+
+            def drop_local(_ref):
+                db.delete(db.get(models.Deal, local_id))
+                db.commit()
+
+            ref = sheet_write.write_then_sync(db, lambda api: sheet_write.add_deal(api, values), then=drop_local)
+        return synced_deal(db, ref, principal)
     not_from_sheet(deal)
     # Can't edit a deal out of (or into) a locked month.
     unlocked_period(db, deal.period_id)
@@ -191,9 +265,16 @@ def update_deal(
 
 
 @router.delete("/{deal_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(auth.require_admin)])
-def delete_deal(deal_id: int, db: Session = Depends(get_session)):
+def delete_deal(deal_id: int, version: str | None = None, db: Session = Depends(get_session)):
+    """`version`: the deal's version when it was opened, so a change made on the sheet since isn't deleted unseen."""
     deal = load_deal(db, deal_id)
-    not_from_sheet(deal)
-    unlocked_period(db, deal.period_id)
+    if sheet_sync.writes_to_sheet(db) and on_deals_tab(deal):
+        stale(deal, version)
+        ref, current = deal.sheet_ref, deal.sheet_version
+        sheet_write.write_then_sync(db, lambda api: sheet_write.delete_deal(api, ref, current))
+        return
+    if not sheet_sync.writes_to_sheet(db):
+        not_from_sheet(deal)
+        unlocked_period(db, deal.period_id)
     db.delete(deal)
     db.commit()

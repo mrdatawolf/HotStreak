@@ -216,8 +216,27 @@ export interface paths {
         /**
          * Set Period Reps
          * @description Replace which reps are on this month's board, their quotas, and their order (list order).
+         *
+         *     With the sheet's data tabs, this rewrites the month's Quotas rows (any month, locked or not) and syncs.
          */
         put: operations["set_period_reps_api_periods__period_id__reps_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/deals/mode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Deal Mode */
+        get: operations["deal_mode_api_deals_mode_get"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -255,7 +274,10 @@ export interface paths {
         /** Update Deal */
         put: operations["update_deal_api_deals__deal_id__put"];
         post?: never;
-        /** Delete Deal */
+        /**
+         * Delete Deal
+         * @description `version`: the deal's version when it was opened, so a change made on the sheet since isn't deleted unseen.
+         */
         delete: operations["delete_deal_api_deals__deal_id__delete"];
         options?: never;
         head?: never;
@@ -698,6 +720,11 @@ export interface components {
             lines: components["schemas"]["BoardLine"][];
             /** Flags */
             flags: components["schemas"]["FlagOut"][];
+            /**
+             * Plus
+             * @default false
+             */
+            plus: boolean;
         };
         /** BoardLine */
         BoardLine: {
@@ -803,8 +830,15 @@ export interface components {
              * @default []
              */
             flag_ids: number[];
+            /**
+             * Plus
+             * @default false
+             */
+            plus: boolean;
             /** Lines */
             lines: components["schemas"]["DealLineIn"][];
+            /** Version */
+            version?: string | null;
         };
         /** DealLineIn */
         DealLineIn: {
@@ -836,6 +870,11 @@ export interface components {
             qty: number;
             /** Amount Cents */
             amount_cents: number | null;
+        };
+        /** DealMode */
+        DealMode: {
+            /** Sheet */
+            sheet: boolean;
         };
         /** DealOut */
         DealOut: {
@@ -878,6 +917,8 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+            /** Version */
+            version?: string | null;
         };
         /** FlagIn */
         FlagIn: {
@@ -1307,6 +1348,8 @@ export interface components {
             /** Message */
             message: string | null;
             counts: components["schemas"]["SyncCounts"] | null;
+            /** Source */
+            source?: string | null;
             /** Mismatches */
             mismatches: string[];
             /** Warnings */
@@ -1873,6 +1916,37 @@ export interface operations {
             };
         };
     };
+    deal_mode_api_deals_mode_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealMode"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_deals_api_deals_get: {
         parameters: {
             query?: {
@@ -2014,7 +2088,9 @@ export interface operations {
     };
     delete_deal_api_deals__deal_id__delete: {
         parameters: {
-            query?: never;
+            query?: {
+                version?: string | null;
+            };
             header?: {
                 authorization?: string | null;
             };

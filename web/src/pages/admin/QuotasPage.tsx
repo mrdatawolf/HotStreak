@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router'
 import { api, errorMessage, type Rep } from '../../api/client'
 import { monthLabel } from '../../lib/format'
 import { useLoad } from '../../lib/useLoad'
+import { useSheetMode } from '../../lib/useSheetMode'
 
 type Row = { rep_id: number; name: string; quota: string }
 
@@ -18,7 +19,9 @@ export default function QuotasPage() {
   // Default to the current month (newest unlocked), matching the board.
   const selectedId = periodId ?? (periods.data?.find((p) => !p.locked_at) ?? periods.data?.[0])?.id ?? null
   const period = periods.data?.find((p) => p.id === selectedId)
-  const locked = !!period?.locked_at
+  const sheetMode = useSheetMode()
+  // With the sheet's data tabs, quotas are saved to its Quotas tab for any month.
+  const locked = !!period?.locked_at && sheetMode === false
 
   useEffect(() => {
     if (selectedId == null) return

@@ -313,6 +313,11 @@ p {
   line-height: 1.2;
 }
 
+.deal .plus-mark {
+  color: #e69138;
+  font-weight: 800;
+}
+
 .deal .location {
   font-size: 0.8rem;
   font-weight: 600;

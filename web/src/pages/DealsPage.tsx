@@ -4,12 +4,14 @@ import { api, errorMessage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { money, monthLabel } from '../lib/format'
 import { useLoad } from '../lib/useLoad'
+import { useSheetMode } from '../lib/useSheetMode'
 
 export default function DealsPage() {
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   // Only admins add or edit deals; users see the list read-only.
   const canEdit = !!useAuth().me?.is_admin
+  const sheetMode = useSheetMode()
   const periods = useLoad(useCallback(() => api.GET('/api/periods'), []))
   const reps = useLoad(useCallback(() => api.GET('/api/reps'), []))
 
@@ -63,7 +65,7 @@ export default function DealsPage() {
         )}
         <input type="search" placeholder="Search client, item, notes…" aria-label="Search deals" value={q}
           onChange={(e) => setParam('q', e.target.value)} />
-        {canEdit && period && !period.locked_at && (
+        {canEdit && period && (!period.locked_at || sheetMode) && (
           <Link className="button primary"
             to={`/deals/new?period=${periodId}${repId ? `&rep=${repId}` : ''}&return=${encodeURIComponent(here)}`}>
             Add deal
@@ -71,7 +73,9 @@ export default function DealsPage() {
         )}
       </div>
 
-      {period?.locked_at && <p className="banner">{monthLabel(period)} is locked. Deals can be viewed but not changed.</p>}
+      {period?.locked_at && sheetMode === false && (
+        <p className="banner">{monthLabel(period)} is locked. Deals can be viewed but not changed.</p>
+      )}
       {deals.error ? <p className="form-error">{errorMessage(deals.error)}</p> : null}
 
       <p className="summary">

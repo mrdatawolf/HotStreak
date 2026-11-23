@@ -223,15 +223,20 @@ function RepRow({ rep, dealHref }: { rep: BoardRep; dealHref?: DealHref }) {
   )
 }
 
+// The sheet's orange for the "+" marker.
+const PLUS_COLOR = '#f6b26b'
+
 function DealCard({ deal, href }: { deal: BoardDeal; href?: string }) {
-  const flag = deal.flags[0]
+  // A flag colors the card; the "+" marker colors it orange (as on the sheet) when there's no flag.
+  const color = deal.flags[0]?.color ?? (deal.plus ? PLUS_COLOR : undefined)
+  const labels = [...deal.flags.map((f) => f.name), ...(deal.plus ? ['Marked +'] : [])]
   const card = (
     <article
-      className={flag ? 'deal flagged' : 'deal'}
-      style={flag ? { ['--flag' as string]: flag.color } : undefined}
-      title={deal.flags.map((f) => f.name).join(', ') || undefined}
+      className={color ? 'deal flagged' : 'deal'}
+      style={color ? { ['--flag' as string]: color } : undefined}
+      title={labels.join(', ') || undefined}
     >
-      <h3>{deal.client_name}</h3>
+      <h3>{deal.client_name}{deal.plus && <span className="plus-mark" aria-label="marked plus"> +</span>}</h3>
       {deal.client_location && <p className="location">{deal.client_location}</p>}
       {deal.lines.map((line, i) => (
         <p key={i} className="item">

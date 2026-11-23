@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { api, errorMessage, type PeriodSummary } from '../../api/client'
 import { money, monthLabel } from '../../lib/format'
 import { useLoad } from '../../lib/useLoad'
+import { useSheetMode } from '../../lib/useSheetMode'
 
 function nextMonth(p?: PeriodSummary) {
   if (!p) {
@@ -16,6 +17,7 @@ export default function MonthsPage() {
   const { data, error, reload } = useLoad(useCallback(() => api.GET('/api/periods/summary'), []))
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
   const [other, setOther] = useState('')
+  const sheetMode = useSheetMode()
 
   const upcoming = nextMonth(data?.[0])
 
@@ -34,11 +36,20 @@ export default function MonthsPage() {
   return (
     <section>
       <h1>Months</h1>
-      <p className="lede">
-        Each month is its own board, like the monthly tabs on the old sheet. Starting a month copies the reps, their
-        order, and quotas from the month before. Locking a month makes its deals and quotas read-only; the board's
-        “current month” is the newest unlocked one.
-      </p>
+      {sheetMode ? (
+        <p className="lede">
+          Each month is its own board. Starting a month copies the reps, their order, and quotas from the month
+          before, and adds them to the Google Sheet's Quotas tab. The sheet decides which month is open: the newest
+          one that isn't in the future. The others show as locked, but admins can still change their deals and
+          quotas.
+        </p>
+      ) : (
+        <p className="lede">
+          Each month is its own board, like the monthly tabs on the old sheet. Starting a month copies the reps, their
+          order, and quotas from the month before. Locking a month makes its deals and quotas read-only; the board's
+          “current month” is the newest unlocked one.
+        </p>
+      )}
 
       <div className="crud-toolbar">
         <button className="primary" onClick={() => act(() => api.POST('/api/periods'), `Started ${monthLabel(upcoming)}.`)}>
@@ -79,8 +90,8 @@ export default function MonthsPage() {
                   <div className="row-actions">
                     <Link to={`/board/${p.id}`}>Board</Link>
                     <Link to={`/deals?period=${p.id}`}>Deals</Link>
-                    {!p.locked_at && <Link to={`/admin/quotas?period=${p.id}`}>Quotas</Link>}
-                    {p.locked_at ? (
+                    {(!p.locked_at || sheetMode) && <Link to={`/admin/quotas?period=${p.id}`}>Quotas</Link>}
+                    {sheetMode ? null : p.locked_at ? (
                       <button onClick={() => confirm(`Unlock ${monthLabel(p)}? Its deals and quotas become editable again.`)
                         && act(() => api.POST('/api/periods/{period_id}/unlock', { params: { path: { period_id: p.id } } }),
                           `Unlocked ${monthLabel(p)}.`)}>Unlock</button>

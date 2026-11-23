@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from .. import auth, models, schemas
+from .. import auth, models, schemas, sheet_sync, sheet_write
 from ..board import build_board
 from ..db import get_session
 
@@ -83,13 +83,19 @@ def start_period(body: schemas.PeriodCreate | None = None, db: Session = Depends
         .order_by(models.Period.year.desc(), models.Period.month.desc())
         .options(selectinload(models.Period.period_reps).selectinload(models.PeriodRep.rep))
     ).first()
+    # Inactive reps are left off; re-add them on the Quotas screen if needed.
+    active = [pr for pr in template.period_reps if pr.rep.active] if template else []
+    if sheet_sync.writes_to_sheet(db) and active:
+        # The month exists on the sheet through its Quotas rows; the sync creates it here.
+        rows = [(pr.rep.name, pr.quota) for pr in active]
+        sheet_write.write_then_sync(db, lambda api: sheet_write.set_quotas(api, year, month, rows))
+        period = db.scalars(select(models.Period).where(models.Period.year == year, models.Period.month == month)).first()
+        if period:
+            return period
     period = models.Period(year=year, month=month)
-    if template:
-        # Inactive reps are left off; re-add them on the Quotas screen if needed.
-        active = [pr for pr in template.period_reps if pr.rep.active]
-        period.period_reps = [
-            models.PeriodRep(rep_id=pr.rep_id, display_order=i, quota=pr.quota) for i, pr in enumerate(active)
-        ]
+    period.period_reps = [
+        models.PeriodRep(rep_id=pr.rep_id, display_order=i, quota=pr.quota) for i, pr in enumerate(active)
+    ]
     db.add(period)
     db.commit()
     return period
@@ -140,9 +146,13 @@ def get_period_reps(period_id: int, db: Session = Depends(get_session)):
 
 @router.put("/{period_id}/reps", response_model=list[schemas.PeriodRepOut], dependencies=[Depends(auth.require_admin)])
 def set_period_reps(period_id: int, body: list[schemas.PeriodRepIn], db: Session = Depends(get_session)):
-    """Replace which reps are on this month's board, their quotas, and their order (list order)."""
+    """Replace which reps are on this month's board, their quotas, and their order (list order).
+
+    With the sheet's data tabs, this rewrites the month's Quotas rows (any month, locked or not) and syncs.
+    """
     period = load_period(db, period_id)
-    if period.locked_at:
+    to_sheet = sheet_sync.writes_to_sheet(db)
+    if period.locked_at and not to_sheet:
         raise HTTPException(status.HTTP_409_CONFLICT, "This month is locked")
     rep_ids = [row.rep_id for row in body]
     if len(set(rep_ids)) != len(rep_ids):
@@ -150,6 +160,13 @@ def set_period_reps(period_id: int, body: list[schemas.PeriodRepIn], db: Session
     reps = {r.id: r for r in db.scalars(select(models.Rep).where(models.Rep.id.in_(rep_ids)))}
     if missing := [i for i in rep_ids if i not in reps]:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, f"Unknown rep id(s): {missing}")
+
+    if to_sheet:
+        rows = [(reps[row.rep_id].name, row.quota) for row in body]
+        year, month = period.year, period.month
+        sheet_write.write_then_sync(db, lambda api: sheet_write.set_quotas(api, year, month, rows))
+        db.expire_all()
+        return period_reps_out(load_period(db, period_id))
 
     existing = {pr.rep_id: pr for pr in period.period_reps}
     for pr in period.period_reps:

@@ -5,7 +5,9 @@ import Combobox from '../components/Combobox'
 import { money, monthLabel } from '../lib/format'
 import { centsToInput, parseMoney } from '../lib/money'
 import { useLoad } from '../lib/useLoad'
+import { useSheetMode } from '../lib/useSheetMode'
 
+// amount is the price of one unit; the line's total is qty × amount.
 type Line = { key: number; itemId: number | null; text: string; qty: string; amount: string }
 type ClientChoice = { id: number | null; text: string; location: string; isNew: boolean }
 
@@ -36,6 +38,7 @@ export default function DealFormPage() {
   const clients = useLoad(useCallback(() => api.GET('/api/clients', { params: { query: { limit: 1000 } } }), []))
   const items = useLoad(useCallback(() => api.GET('/api/items', { params: { query: { limit: 1000 } } }), []))
   const flags = useLoad(useCallback(() => api.GET('/api/flags'), []))
+  const sheetMode = useSheetMode()
 
   const [existing, setExisting] = useState<Deal | null>(null)
   const [chosenPeriodId, setPeriodId] = useState<number | null>(params.get('period') ? Number(params.get('period')) : null)
@@ -48,6 +51,7 @@ export default function DealFormPage() {
   const [total, setTotal] = useState('')
   const [totalManual, setTotalManual] = useState(false)
   const [flagIds, setFlagIds] = useState<number[]>([])
+  const [plus, setPlus] = useState(false)
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -66,13 +70,15 @@ export default function DealFormPage() {
       setClient({ id: data.client.id, text: data.client.name, location: data.client.location ?? '', isNew: false })
       setDate(data.deal_date ?? '')
       setLines(data.lines.map((l) => ({
-        key: nextKey++, itemId: l.item_id, text: l.label, qty: String(l.qty), amount: centsToInput(l.amount_cents),
+        key: nextKey++, itemId: l.item_id, text: l.label, qty: String(l.qty),
+        amount: centsToInput(l.amount_cents == null ? null : Math.round(l.amount_cents / Math.max(1, l.qty))),
       })))
       const lineSum = data.lines.every((l) => l.amount_cents != null)
         ? data.lines.reduce((s, l) => s + (l.amount_cents ?? 0), 0) : null
       setTotal(centsToInput(data.total_cents))
       setTotalManual(lineSum !== data.total_cents)
       setFlagIds(data.flags.map((f) => f.id))
+      setPlus(data.sheet_plus)
       setNotes(data.notes ?? '')
     })
   }, [editingId])
@@ -95,11 +101,18 @@ export default function DealFormPage() {
   const date = chosenDate ?? (editingId == null && todayFits ? isoDay(today) : '')
 
   const fromSheet = existing?.sheet_ref
-  // Sheet deals are overwritten by the next sync, so they're changed on the sheet, not here.
-  const locked = !!existing?.period_locked || !!fromSheet
+  // With the sheet's Deals tab, saves go to the sheet, in any month. Without it, deals from the old month tabs
+  // would be overwritten by the next sync, so they're changed on the sheet, and locked months are read-only.
+  const sheetDealReadOnly = !!fromSheet && sheetMode !== true
+  const locked = (!!existing?.period_locked && sheetMode !== true) || sheetDealReadOnly
   const bounds = period ? monthBounds(period.year, period.month) : undefined
 
-  const lineCents = lines.map((l) => parseMoney(l.amount))
+  const qtyOf = (l: Line) => Math.max(1, Number(l.qty) || 1)
+  // Each line's total: quantity × price each.
+  const lineCents = lines.map((l) => {
+    const each = parseMoney(l.amount)
+    return each == null || Number.isNaN(each) ? each : each * qtyOf(l)
+  })
   const lineSum = lineCents.every((c) => c != null && !Number.isNaN(c))
     ? lineCents.reduce<number>((s, c) => s + (c ?? 0), 0) : null
   const shownTotal = totalManual ? total : lineSum != null ? centsToInput(lineSum) : ''
@@ -126,10 +139,10 @@ export default function DealFormPage() {
     setError(null)
     if (periodId == null || repId == null) return setError('Pick a month and a rep')
     if (client.id == null && !client.isNew) return setError('Pick a client from the list, or choose “+ New client”')
-    if (lineCents.some((c) => Number.isNaN(c))) return setError('Check the line amounts — use numbers like 1234.56')
+    if (lineCents.some((c) => Number.isNaN(c))) return setError('Check the prices — use numbers like 1234.56')
     const totalCents = totalManual ? parseMoney(total) : null
     if (totalManual && (totalCents == null || Number.isNaN(totalCents))) return setError('Enter the deal total')
-    if (!totalManual && lineSum == null) return setError('Enter an amount on every line, or type the total')
+    if (!totalManual && lineSum == null) return setError('Enter a price on every line, or type the total')
 
     const body = {
       period_id: periodId,
@@ -141,10 +154,12 @@ export default function DealFormPage() {
       total_cents: totalManual ? totalCents : null,
       notes: notes.trim() || null,
       flag_ids: flagIds,
+      plus,
+      version: existing?.version ?? null,
       lines: lines.map((l, i) => ({
         item_id: l.itemId,
         description: l.itemId == null ? l.text.trim() || null : null,
-        qty: Math.max(1, Number(l.qty) || 1),
+        qty: qtyOf(l),
         amount_cents: lineCents[i],
       })),
     }
@@ -159,7 +174,9 @@ export default function DealFormPage() {
 
   async function remove() {
     if (editingId == null || !confirm('Delete this deal?')) return
-    const { error } = await api.DELETE('/api/deals/{deal_id}', { params: { path: { deal_id: editingId } } })
+    const { error } = await api.DELETE('/api/deals/{deal_id}', {
+      params: { path: { deal_id: editingId }, query: { version: existing?.version ?? null } },
+    })
     if (error) return setError(errorMessage(error))
     navigate(safeReturn(params.get('return'), `/deals?period=${periodId}`))
   }
@@ -176,7 +193,13 @@ export default function DealFormPage() {
           {' '}on {new Date(existing.updated_at + 'Z').toLocaleString()}
         </p>
       )}
-      {fromSheet
+      {sheetMode && (
+        <p className="hint">
+          {fromSheet ? `On the Google Sheet as ${fromSheet} (Deals tab). ` : ''}
+          Saving writes to the sheet's Deals tab. The sheet keeps the deal total, not per-line prices.
+        </p>
+      )}
+      {sheetDealReadOnly
         ? <p className="banner">
             This deal comes from the Google Sheet (cell {fromSheet}){existing?.sheet_plus ? ', marked “+”' : ''}.
             Change it on the sheet; the next sync brings it in.
@@ -193,7 +216,7 @@ export default function DealFormPage() {
                 if (next && !date.startsWith(`${next.year}-${pad(next.month)}-`)) setDate('')
                 setPeriodId(Number(e.target.value))
               }}>
-                {periods.data?.filter((p) => !p.locked_at || p.id === periodId).map((p) => (
+                {periods.data?.filter((p) => !p.locked_at || p.id === periodId || sheetMode).map((p) => (
                   <option key={p.id} value={p.id}>{monthLabel(p)}{p.locked_at ? ' (locked)' : ''}</option>
                 ))}
               </select>
@@ -244,7 +267,7 @@ export default function DealFormPage() {
 
           <div className="lines">
             <div className="lines-head" aria-hidden="true">
-              <span>Item</span><span>Qty</span><span>Amount</span><span />
+              <span>Item</span><span>Qty</span><span>Price each</span><span />
             </div>
             {lines.map((l, i) => (
               <div className="line" key={l.key}>
@@ -259,7 +282,7 @@ export default function DealFormPage() {
                 />
                 <input aria-label={`Quantity ${i + 1}`} type="number" min={1} step={1} inputMode="numeric" required
                   value={l.qty} onChange={(e) => updateLine(l.key, { qty: e.target.value })} />
-                <input aria-label={`Amount ${i + 1}`} inputMode="decimal" placeholder="$0.00" value={l.amount}
+                <input aria-label={`Price each ${i + 1}`} inputMode="decimal" placeholder="$0.00" value={l.amount}
                   onChange={(e) => updateLine(l.key, { amount: e.target.value })} />
                 <button type="button" className="danger" aria-label={`Remove item ${i + 1}`} disabled={lines.length === 1}
                   onClick={() => setLines((ls) => ls.filter((x) => x.key !== l.key))}>✕</button>
@@ -277,9 +300,9 @@ export default function DealFormPage() {
                 {totalManual
                   ? <>Typed by hand. {lineSum != null && (
                     <button type="button" className="link" onClick={() => setTotalManual(false)}>
-                      Use line amounts ({money(lineSum)})
+                      Use qty × price ({money(lineSum)})
                     </button>)}</>
-                  : 'Adds up the line amounts. Type here to override.'}
+                  : 'Adds up qty × price on each line. Type here to override.'}
               </span>
             </label>
           </div>
@@ -287,6 +310,11 @@ export default function DealFormPage() {
           {flags.data && flags.data.length > 0 && (
             <fieldset className="flags">
               <legend>Flags</legend>
+              <label className="check">
+                <input type="checkbox" checked={plus} onChange={(e) => setPlus(e.target.checked)} />
+                <span className="swatch" style={{ background: '#f6b26b' }} />
+                “+” marker
+              </label>
               {flags.data.map((f) => (
                 <label key={f.id} className="check">
                   <input type="checkbox" checked={flagIds.includes(f.id)}

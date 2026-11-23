@@ -37,6 +37,8 @@ class BoardDeal(BaseModel):
     total_cents: int
     lines: list[BoardLine]
     flags: list[FlagOut]
+    # The sheet's "+" marker (orange on the sheet).
+    plus: bool = False
 
 
 class BoardRep(BaseModel):
@@ -240,7 +242,11 @@ class DealIn(BaseModel):
     total_cents: Annotated[int, Field(ge=0)] | None = None
     notes: Annotated[str, StringConstraints(strip_whitespace=True, max_length=2000)] | None = None
     flag_ids: list[int] = []
+    # The sheet's "+" marker on the client.
+    plus: bool = False
     lines: Annotated[list[DealLineIn], Field(min_length=1, max_length=50)]
+    # The deal's `version` when the form was opened: a change saved on the sheet since is refused (409).
+    version: str | None = None
 
     @model_validator(mode="after")
     def one_client(self):
@@ -263,7 +269,8 @@ class DealOut(BaseModel):
     id: int
     period_id: int
     period_locked: bool
-    # The sheet cell ("926!C5") for deals synced from the Google Sheet; those are read-only here.
+    # Where the deal is on the Google Sheet: its Deals-tab ID ("D00042"), or a cell on an old month tab
+    # ("926!C5", read-only here). Null for deals entered in the app only.
     sheet_ref: str | None
     # The client was marked "+" on the sheet that month.
     sheet_plus: bool
@@ -279,6 +286,14 @@ class DealOut(BaseModel):
     updated_by_name: str | None
     created_at: datetime
     updated_at: datetime
+    # Send back with an edit or delete, so a change made on the sheet meanwhile isn't overwritten.
+    version: str | None = None
+
+
+class DealMode(BaseModel):
+    # True once the Google Sheet has the Deals tab: saves go to the sheet (any month, locked or not), and the
+    # sheet keeps only a deal's total, not per-line amounts, and only the New customer flag.
+    sheet: bool
 
 
 # --- Months ---
@@ -514,6 +529,8 @@ class SyncRun(BaseModel):
     ok: bool
     message: str | None
     counts: SyncCounts | None
+    # What was read: "data tabs" (Deals, Quotas, Reps) or "month tabs" (the old layout). Missing on old runs.
+    source: str | None = None
     # Where our totals differ from the sheet's SALES / MONTHLY TOTAL cells, and anything guessed at.
     mismatches: list[str]
     warnings: list[str]

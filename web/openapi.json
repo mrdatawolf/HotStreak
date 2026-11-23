@@ -599,7 +599,7 @@
           "periods"
         ],
         "summary": "Set Period Reps",
-        "description": "Replace which reps are on this month's board, their quotas, and their order (list order).",
+        "description": "Replace which reps are on this month's board, their quotas, and their order (list order).\n\nWith the sheet's data tabs, this rewrites the month's Quotas rows (any month, locked or not) and syncs.",
         "operationId": "set_period_reps_api_periods__period_id__reps_put",
         "parameters": [
           {
@@ -653,6 +653,55 @@
                     "$ref": "#/components/schemas/PeriodRepOut"
                   },
                   "title": "Response Set Period Reps Api Periods  Period Id  Reps Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/deals/mode": {
+      "get": {
+        "tags": [
+          "deals"
+        ],
+        "summary": "Deal Mode",
+        "operationId": "deal_mode_api_deals_mode_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DealMode"
                 }
               }
             }
@@ -940,6 +989,7 @@
           "deals"
         ],
         "summary": "Delete Deal",
+        "description": "`version`: the deal's version when it was opened, so a change made on the sheet since isn't deleted unseen.",
         "operationId": "delete_deal_api_deals__deal_id__delete",
         "parameters": [
           {
@@ -949,6 +999,22 @@
             "schema": {
               "type": "integer",
               "title": "Deal Id"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
             }
           },
           {
@@ -3188,6 +3254,11 @@
             },
             "type": "array",
             "title": "Flags"
+          },
+          "plus": {
+            "type": "boolean",
+            "title": "Plus",
+            "default": false
           }
         },
         "type": "object",
@@ -3538,6 +3609,11 @@
             "title": "Flag Ids",
             "default": []
           },
+          "plus": {
+            "type": "boolean",
+            "title": "Plus",
+            "default": false
+          },
           "lines": {
             "items": {
               "$ref": "#/components/schemas/DealLineIn"
@@ -3546,6 +3622,17 @@
             "maxItems": 50,
             "minItems": 1,
             "title": "Lines"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
           }
         },
         "type": "object",
@@ -3675,6 +3762,19 @@
         ],
         "title": "DealLineOut"
       },
+      "DealMode": {
+        "properties": {
+          "sheet": {
+            "type": "boolean",
+            "title": "Sheet"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sheet"
+        ],
+        "title": "DealMode"
+      },
       "DealOut": {
         "properties": {
           "id": {
@@ -3787,6 +3887,17 @@
             "type": "string",
             "format": "date-time",
             "title": "Updated At"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
           }
         },
         "type": "object",
@@ -5190,6 +5301,17 @@
                 "type": "null"
               }
             ]
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
           },
           "mismatches": {
             "items": {

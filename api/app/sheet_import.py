@@ -25,8 +25,8 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
 
-from sqlalchemy import delete, select
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.orm import Session, selectinload
 
 from . import models
 from .item_parse import Catalog
@@ -60,7 +60,15 @@ class SheetDeal:
     amount: float
     new_customer: bool
     plus: bool
+    # The deal's cell on a month tab ("926!C5"), or its ID on the Deals tab ("D00042").
     where: str
+    # Only the Deals tab has these.
+    deal_date: date | None = None
+    location: str | None = None
+    notes: str | None = None
+    entered_by: str | None = None
+    # Fingerprint of the Deals row (see sheet_tabs.row_version); None for month tabs.
+    version: str | None = None
 
 
 @dataclass
@@ -307,18 +315,29 @@ def current_month(result: ParseResult, today: date) -> SheetMonth | None:
     return eligible[-1] if eligible else None
 
 
-def sync(session: Session, result: ParseResult, today: date | None = None) -> dict[str, int]:
+@dataclass
+class RepInfo:
+    active: bool
+    counts_toward_total: bool
+
+
+def sync(session: Session, result: ParseResult, today: date | None = None,
+         rep_info: dict[str, RepInfo] | None = None) -> dict[str, int]:
     """Bring the database in line with the parsed sheet. Safe to run again and again.
 
     - Months, reps, clients and flags are matched by name and created when new.
     - Each sheet month's rep rows and quotas are replaced with the sheet's.
-    - Deals from the sheet are re-created from scratch; deals entered in the app are left alone.
+    - Deals from the sheet are matched by their sheet reference (the Deals tab's ID, or the month tab's cell)
+      and updated in place, so they keep their app ID; ones gone from the sheet are deleted. Deals entered
+      in the app only are left alone.
     - Client and item names go through the saved name fixes (see name_fixes.py); spellings that differ
       only by case or punctuation use the sheet's most-used one.
     - Item text is split into brand + model and linked to the item catalog (see item_parse.py).
     - The current month (newest tab, not in the future) is unlocked and every other sheet month is
       locked, like the sheet's locked tabs.
     - The sheet's MONTHLY TOTAL includes HOUSE, so new reps count toward the total.
+    - rep_info (from the Reps tab) sets each rep's Active and Counts-toward-total; without it (month tabs),
+      a rep is active when they're on the current month.
     Doesn't commit.
     """
     today = today or date.today()
@@ -339,17 +358,26 @@ def sync(session: Session, result: ParseResult, today: date | None = None) -> di
     item_names = resolve_names([desc for d in sheet_deals for _, desc in d.items], fixes["item"])
     catalog = Catalog(session, list(item_names.values()))
     reps = {r.name.upper(): r for r in session.scalars(select(models.Rep))}
-    clients: dict[str, models.Client] = {}
-    for c in session.scalars(select(models.Client).where(models.Client.location.is_(None)).order_by(models.Client.id)):
-        clients.setdefault(name_key(c.name), c)
+    for name, info in (rep_info or {}).items():
+        rep = reps.get(name)
+        if rep is None:
+            rep = reps[name] = models.Rep(name=name)
+            session.add(rep)
+        rep.active, rep.counts_toward_total = info.active, info.counts_toward_total
+    users = {u.name.lower(): u for u in session.scalars(select(models.User))}
+    # A client is a name plus an optional location (branch).
+    clients: dict[tuple[str, str], models.Client] = {}
+    for c in session.scalars(select(models.Client).order_by(models.Client.id)):
+        clients.setdefault((name_key(c.name), (c.location or "").lower()), c)
     periods = {(p.year, p.month): p for p in session.scalars(select(models.Period))}
 
-    # Lines first, with "fetch" so the session forgets the deleted rows (their ids get reused).
-    sheet_deal_ids = select(models.Deal.id).where(models.Deal.sheet_ref.is_not(None))
-    fetch = {"synchronize_session": "fetch"}
-    session.execute(delete(models.DealLine).where(models.DealLine.deal_id.in_(sheet_deal_ids)), execution_options=fetch)
-    session.execute(delete(models.Deal).where(models.Deal.sheet_ref.is_not(None)), execution_options=fetch)
-    session.flush()
+    existing: dict[str, models.Deal] = {}
+    for deal in session.scalars(select(models.Deal).where(models.Deal.sheet_ref.is_not(None)).order_by(models.Deal.id)
+                                .options(selectinload(models.Deal.lines), selectinload(models.Deal.flags))):
+        if deal.sheet_ref in existing:  # can't happen from one sheet; tidy up if it ever did
+            session.delete(deal)
+        else:
+            existing[deal.sheet_ref] = deal
 
     used_clients: set[str] = set()
     deal_count = 0
@@ -372,7 +400,8 @@ def sync(session: Session, result: ParseResult, today: date | None = None) -> di
             if rep is None:
                 rep = reps[rep_data.name] = models.Rep(name=rep_data.name, counts_toward_total=True)
                 session.add(rep)
-            rep.active = rep_data.name in current_reps
+            if rep_info is None:
+                rep.active = rep_data.name in current_reps
             if rep_data.name in slots:
                 result.warnings.append(f"{m.tab}: {rep_data.name} appears twice; deals merged under one rep, first quota kept")
             else:
@@ -381,26 +410,41 @@ def sync(session: Session, result: ParseResult, today: date | None = None) -> di
 
             for d in rep_data.deals:
                 name = names[name_key(d.client)]
-                client = clients.get(name_key(name))
+                key = (name_key(name), (d.location or "").lower())
+                client = clients.get(key)
                 if client is None:
-                    client = clients[name_key(name)] = models.Client(name=name)
+                    client = clients[key] = models.Client(name=name, location=d.location)
                     session.add(client)
-                used_clients.add(name_key(name))
-                session.add(models.Deal(
-                    period=period,
-                    rep=rep,
-                    client=client,
-                    total_cents=round(d.amount * 100),
-                    sheet_ref=d.where,
-                    sheet_client=d.client[:200],
-                    sheet_plus=d.plus,
-                    lines=[models.DealLine(item=catalog.item_for(item_names[name_key(desc)]),
-                                           description=item_names[name_key(desc)][:200], sheet_description=desc[:200], qty=qty)
-                           for qty, desc in d.items],
-                    flags=[flags[FLAG_NEW[0]]] if d.new_customer else [],
-                ))
+                used_clients.add(key)
+                entered_by = users.get(d.entered_by.lower()) if d.entered_by else None
+                deal = existing.pop(d.where, None)
+                changed = deal is None or d.version is None or deal.sheet_version != d.version
+                if deal is None:
+                    deal = models.Deal(sheet_ref=d.where)
+                    session.add(deal)
+                deal.period, deal.rep, deal.client = period, rep, client
+                deal.total_cents = round(d.amount * 100)
+                deal.sheet_client = d.client[:200]
+                deal.sheet_plus = d.plus
+                deal.sheet_version = d.version
+                deal.deal_date, deal.notes = d.deal_date, d.notes
+                deal.created_by = entered_by
+                if changed:
+                    # Who changed a row on the sheet isn't known; the app sets it after its own writes.
+                    deal.updated_by = entered_by
+                lines = [(catalog.item_for(item_names[name_key(desc)]), item_names[name_key(desc)][:200], desc[:200], qty)
+                         for qty, desc in d.items]
+                if [(x.item, x.description, x.sheet_description, x.qty, x.amount_cents) for x in deal.lines] != \
+                        [(*line, None) for line in lines]:
+                    deal.lines = [models.DealLine(item=item, description=desc, sheet_description=typed, qty=qty)
+                                  for item, desc, typed, qty in lines]
+                want_flags = [flags[FLAG_NEW[0]]] if d.new_customer else []
+                if deal.flags != want_flags:
+                    deal.flags = want_flags
                 deal_count += 1
 
+    for deal in existing.values():  # gone from the sheet
+        session.delete(deal)
     session.flush()
     return {"months": len(result.months), "reps": len({r.name for m in result.months for r in m.reps}),
             "clients": len(used_clients), "deals": deal_count}

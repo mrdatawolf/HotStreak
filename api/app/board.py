@@ -90,6 +90,7 @@ def build_board(session: Session, period: models.Period) -> schemas.Board:
                             for line in d.lines
                         ],
                         flags=[schemas.FlagOut.model_validate(f) for f in d.flags],
+                        plus=d.sheet_plus,
                     )
                     for d in rep_deals
                 ],

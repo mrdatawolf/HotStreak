@@ -63,14 +63,17 @@ export default function SheetPage() {
         {last && (last.ok ? (
           <p className="form-ok" role="status">
             Synced {new Date(last.at).toLocaleString()}
-            {last.counts && ` — ${last.counts.months} months, ${last.counts.reps} reps, ${last.counts.clients} clients, ${last.counts.deals} deals.`}
+            {last.counts && ` — ${last.counts.months} months, ${last.counts.reps} reps, ${last.counts.clients} clients, ${last.counts.deals} deals`}
+            {last.source === 'data tabs' ? ', from the Deals, Quotas and Reps tabs.' : last.source ? ', from the month tabs.' : '.'}
           </p>
         ) : (
           <p className="form-error" role="status">
             Sync failed {new Date(last.at).toLocaleString()}: {last.message}
           </p>
         ))}
-        {last?.ok && last.mismatches.length === 0 && <p className="muted">Every rep's total and month total matches the sheet.</p>}
+        {last?.ok && last.source !== 'data tabs' && last.mismatches.length === 0 && (
+          <p className="muted">Every rep's total and month total matches the sheet.</p>
+        )}
         {last && last.mismatches.length > 0 && (
           <details open>
             <summary>{last.mismatches.length} totals differ from the sheet</summary>
